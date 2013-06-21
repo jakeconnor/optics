@@ -1,0 +1,15 @@
+This is GAFFE a toolbox for the Generalised Adaptive Fast Fourier
+Evolution (GAFFE) of N-dimensional, potentially nonlinear partial
+differential equations.  It is a highly generalised implementation of
+a 3rd order accurate split step technique for modeling, chiefly, wave
+equations under the slowly varying envelope approximation. Unlike many
+naieve approaches this adapts both the sampling grid and the step size
+to trade-off precision and speed.  In addition it is capable of
+modeling problems with any number of dimensions.
+
+If you find this useful, have comments or suggestions please feel free
+to contact me.
+
+To install, unzip this file in a directory and add the path to the MATLAB search path using pathtool or addpath.  
+
+Entering 'ver' at the prompt should result in the version of the toolbox being displayed.
