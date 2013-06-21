@@ -11,7 +11,7 @@ time = input('Time to run simulation = ');
 % instability
 % 2,2,1,1,1,0,0 is very stable, but leaves noise bhind as it returns to the
 % beginning, which eventually breaks down. using more space steps or less time steps increases the
-% speed it breaks down also. 
+% speed it breaks down also.
 
 for j=1:number
     disp(sprintf('Wave %d' , j))
@@ -42,7 +42,7 @@ for n=1:step_num_z
     if n+sign(beta1{j})>0 & n+sign(beta1{j})<=step_num_z;
         g1(n,n+sign(beta1{j}))=-sign(beta1{j})/deltaz;
     end
-%     
+    %
 end
 
 g1(1,step_num_z)=1/deltaz;
@@ -90,22 +90,20 @@ for n=1:step_num_t-1
         if n==1 %need to fix X so is actually a column vector, i think?
             du_dt=(temp{j}(n,:)-temp{j}(n,:))/deltat;
             X(:,n+1)=vertcat(temp{j}(n,:)',du_dt');
-        else
-            X(1,n)=X(end,n);
-%             X(end-2:end,n)=0;
-%             temp{j}(n,:)=[X(1:step_num_z,n)';zeros(step_num_z,1)];
-%             du_dz=(temp{j}(n,[2:step_num_z,1])-temp{j}(n,[step_num_z,1:step_num_z-1]))./(2*deltaz);
+        else            %             X(end-2:end,n)=0;
+            %             temp{j}(n,:)=[X(1:step_num_z,n)';zeros(step_num_z,1)];
+            %             du_dz=(temp{j}(n,[2:step_num_z,1])-temp{j}(n,[step_num_z,1:step_num_z-1]))./(2*deltaz);
             X(:,n+1)=X(:,n)-(deltat.*indmat*X(:,n))/beta1{j};
-        end 
+        end
         
- 
+        
         %          du_dt=(temp{j}(n,:)-temp{j}(n-1,:))/deltat;
         %          du2_dt2(n,m)=(du_dt(n,m)-du_dt(n-1,m)/deltat;
         
         
     end
     % subplot(2,3,1);
-   
+    
     %  title('Wave (A) in space');
     %  hold on
     % subplot(2,3,2);
@@ -115,13 +113,14 @@ for n=1:step_num_t-1
     %  plot(X(1+step_num_z:2*step_num_z,n))
     %  title('dA/dt in space');
     % subplot(2,3,4);
-    %  mesh(abs(X(1+step_num_z:2*step_num_z,:)))%to plot over time
+    %
     %  title('dA/dt in space & time');
     %  subplot(2,3,5);
     
-   if mod(n,14)==0
-         plot(X(:,n))
-drawnow;
-     end
+    if mod(n,14)==0
+        %          plot(X(:,n))
+        mesh(abs(X(1+step_num_z:2*step_num_z,:)))%to plot over time
+        drawnow;
+    end
 end
 
