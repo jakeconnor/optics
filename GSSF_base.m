@@ -12,23 +12,24 @@ loss = input('alpha, positive for loss, negative for gain = ');
 S=input('Self Steepening Factor (0.02 default) = ');
 chirp0 = 0; % input pulse chirp (default value) 
 
-% Define defaults.
+% Define default mesh type and error tolerance.
 mesh='fibonacci&humble';
 TolGlobal  = 1E-9;
 TolAliased = 1E-16;
 
 if nargin > 0
-    mesh=varargin{1};
+    mesh=varargin{1}; %change mesh type
 end
 if nargin > 1
-  TolGlobal=varargin{2};
+  TolGlobal=varargin{2}; %change global tolerance
 end
 if nargin > 2
-  TolAliased=varargin{3};
+  TolAliased=varargin{3}; %change aliasing tolerance
 end
 
-% Initial number of samples.
-N = round (100*Options.MaxZ);
+% Initial number of samples, size of starting matrix for the wave (will be
+% resized later)
+N = round (100*Options.MaxZ); 
 % Size of real space (multiples of pi)
 W = 20*pi;
 
@@ -37,17 +38,23 @@ W = 20*pi;
 
 % Set mesh resizing to choice supplied by argument -- defaults.
 Options.Callback.Mesh = evolvemeshset(mesh);
-
+%defines an anonymous function to be called to evolve according to both
+%kerr non-linearity and self-steepening.
 SelfSteepeningAndKerr = @(dxi, omega, tau, u, fftu) ...
     DefaultSelfSteepening(S*dxi,omega,tau,u,fftu) .* ...
     DefaultKerr(dxi,[],[],u,[]);
 
+
+%housekeeping stuff.
 % Register this function handle as the nonlinear operator to use.
 Options.Callback.OperatorNonlinear = SelfSteepeningAndKerr;
+
 % Switch off any dispersion by using the identity linear operator.
 Options.Callback.OperatorLinear = @DefaultDispersion;
+
 % Execute plot_progress after each iteration.
 Options.Callback.EndIteration = @plot_progress;
+
 % Evolve the field.  This does the heavy lifting.
 Options.TolAliased1=TolAliased;
 Options.TolAliased2=TolAliased;
@@ -55,6 +62,8 @@ Options.TolGlobal=TolGlobal;
 Options.MaxIterations=1E6;
 N = Options.Callback.Mesh.SetInitialSize(N);
 
+
+%creates base matrices for real and frequency space, step sizes
 % Set up the space.
 [tau,dtau,omega,domega]= fftspace(W,N);
 
@@ -62,10 +71,11 @@ N = Options.Callback.Mesh.SetInitialSize(N);
 u0 = second_order_soliton(tau,0);
 u0 = ifft(fft(u0));
 
-% Run the simulation.
+% Run the simulation. passes to evolve function (down the rabbit hole we go)
 [z,u1,tau1,omega1] = evolve(u0,tau,Options);
 
-% Get internal values in plot_progress function.
+% Get internal values in plot_progress function. Checks error, and other
+% values
 [IsQuit, err] = plot_progress('get');
 global waves;
 % Finally report the maximum observed infinity norm error.
