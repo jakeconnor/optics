@@ -5,24 +5,26 @@
 
 %FFFFFFIIIIXXXXXXXX
 %Does not work for non zero sigma value if only one wave
-
+%sigma set to 0 if only one wave. should recheck math to see if multiwave
+%approach is valid.
 clear all;
 
 % accomodating for multiple wave input
-number = input('Number of waves = ');
-distance= input('Enter fiber length (in units of L_D) = ');% based off of first wave; entire length, graphed at the end
-sigma = input('Sigma (for polarization) = ');
+number = 0 + input('Number of waves = ');
+distance= 0+ input('Enter fiber length (in units of L_D) = ');% based off of first wave; entire length, graphed at the end
+if number >1; sigma = 0+ input('Sigma (for polarization) = ');
+else sigma=0; end
 
 % looping to get correct no. of waves
 for j=1:number
     disp(sprintf('Wave %d' , j))
     
     % specify input parameters
-    beta2{j} = input('dispersion: 1 for normal, -1 for anomalous = '); % dispersion of the group velocity (responsible for pulse broadening)
-    N{j} = input('Nonlinear parameter N = '); %Solition order
-    mshape{j} = input('m = 0 for sech, m > 0 for super-Gaussian = '); % decided on input wave
-    alpha{j} = input('alpha, positive for loss, negative for gain = ');% loss or gain factor (same for each wave?)
-    ss{j} = input('self steepening factor = ');
+    beta2{j} =  0 + input('dispersion: 1 for normal, -1 for anomalous = '); % dispersion of the group velocity (responsible for pulse broadening)
+    N{j} = 0 + input('Nonlinear parameter N = '); %Solition order
+    mshape{j} = 0;%input('m = 0 for sech, m > 0 for super-Gaussian = '); % decided on input wave
+    alpha{j} = 0+ input('alpha, positive for loss, negative for gain = ');% loss or gain factor (same for each wave?)
+    ss{j} = 0+ input('self steepening factor = ');
 end
 
 chirp0 = 0; % input pulse chirp (default value)
@@ -56,7 +58,7 @@ for j=1:number
 end
 
 
-for n=0:step_num
+for n=1:step_num
     sumwaves=0; % initializing summation of square of every wave
     
     
