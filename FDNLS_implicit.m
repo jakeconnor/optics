@@ -25,10 +25,10 @@ nt = 1024; Tmax = 32; % FFT points and window size for graphs
 % step_num_t=step_num_z*ratio;
 % deltat = time/step_num_t; % step size in z
 step_num_t = round (500 * time * max(N).*2); % No. of z steps
-step_num_z = round (100 * distance * max(N).*2);
-
 deltat = time/step_num_t; % step size in z
-deltaz= distance/step_num_z;
+deltaz=deltat/beta1{j};
+
+step_num_z=distance/deltaz;
 r=deltat/(2*beta1{j}*deltaz);
 
 

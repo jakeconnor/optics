@@ -19,12 +19,9 @@ chirp = 0; % input pulse chirp (default value)
 
 %---set simulation parameters
 nt = 1024; Tmax = 32; % FFT points and window size for graphs
-step_num_t = round (500 * time * max(N).*2); % No. of z steps
-deltat = time/step_num_t; % step size in z
-deltaz=deltat/beta1{j};
-r=deltat/(2*beta1{j}*deltaz);
-step_num_z=distance/deltaz;
+
 g1=zeros(step_num_z);
+r=deltat/(2*beta1{j}*deltaz);
 %gc1=zeros(step_num_z);
 for n=1:step_num_z 
     %setting up an 8th order accurate central difference, overkill, but best chance.

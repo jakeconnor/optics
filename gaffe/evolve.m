@@ -119,35 +119,35 @@
 % $Revision: 1.10 $
 % Copyright (c) 2009, Edward J. Grace
 % All rights reserved.
- 
-% Redistribution and use in source and binary forms, with or 
-% without modification, are permitted provided that the following 
+
+% Redistribution and use in source and binary forms, with or
+% without modification, are permitted provided that the following
 % conditions are met:
- 
-%     * Redistributions of source code must retain the above 
-%       copyright notice, this list of conditions and the following 
+
+%     * Redistributions of source code must retain the above
+%       copyright notice, this list of conditions and the following
 %       disclaimer.
-%     * Redistributions in binary form must reproduce the above 
-%       copyright notice, this list of conditions and the following 
-%       disclaimer in the documentation and/or other materials 
+%     * Redistributions in binary form must reproduce the above
+%       copyright notice, this list of conditions and the following
+%       disclaimer in the documentation and/or other materials
 %       provided with the distribution.
-%     * Neither the name of the Imperial College London nor the 
-%       names of its contributors may be used to endorse or 
-%       promote products derived  this software without specific 
+%     * Neither the name of the Imperial College London nor the
+%       names of its contributors may be used to endorse or
+%       promote products derived  this software without specific
 %       prior written permission.
- 
-% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
-% CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
-% INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
-% MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
-% DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS 
-% BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
-% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED 
-% TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-% DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
-% ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR 
-% TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF 
-% THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
+
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+% CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+% INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+% MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+% DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+% BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+% TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+% DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+% ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+% TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
+% THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 % SUCH DAMAGE.
 
 function [z,u1,X,KX]=evolve(varargin)
@@ -181,21 +181,20 @@ defaultopt = struct(...
     'Trace',0,...
     'User1',[],...
     'Callback',struct(...
-        'BeginIteration',[],...
-        'EndIteration',[],...
-        'OperatorLinear',@DefaultDispersion,...
-        'OperatorNonlinear',@DefaultKerr,...
-        'EvolveStep',@DefaultEvolveStep,...
-        'Mesh',evolvemeshset('default')...
-        )...
+    'BeginIteration',[],...
+    'EndIteration',[],...
+    'OperatorLinear',@DefaultDispersion,...
+    'OperatorNonlinear',@DefaultKerr,...
+    'EvolveStep',@DefaultEvolveStep,...
+    'Mesh',evolvemeshset('default')...
+    )...
     );
-% If we are called with just "defaults" and are expected to return just one argument, 
+% If we are called with just "defaults" and are expected to return just one argument,
 % return the default options.  This is the format expected by 'optimget'.
 if nargin==1 && nargout <= 1 && isequal(varargin{1},'defaults')
     z = defaultopt;
     return
 end
-
 
 
 %% Parse calling arguments
@@ -266,13 +265,13 @@ end
 
 %% Setup supporting coordinate systems and transforms.
 % U0 should always contain the most recent fft of the field.
-U0 = fftn(u0); 
+U0 = fftn(u0);
 
 
 %% Initialise the field according to the initialisation callback.
 N_new = o.Callback.Mesh.SetInitialSize(N);
 if any(N_new ~= N)
-    u0 = fftnpad(u0,N_new); 
+    u0 = fftnpad(u0,N_new);
     U0 = fftn(u0);
     if o.Trace
         fprintf('Resizing initial field from %s to %s.\n',sprintsize(N),sprintsize(N_new));
@@ -304,7 +303,7 @@ end
 if ~isempty(o.Callback.EndIteration)
     feval(o.Callback.EndIteration,'begin');
 end
-    
+
 %% Select initial dz.
 if isempty(o.InitialDZ)
     % The step size should be the minimum of a step size that offers a
@@ -318,7 +317,7 @@ if isempty(o.InitialDZ)
     
     % Step size if we assume a maximum nonlinear phase shift.
     dz_max_NL = (pi/8)./abs(maximumvalue(u0)).^2;
-        
+    
     % Step size based on maximum spectral phase rotations.
     dz_max_L = dz_max_Z*ones(1,NDim);
     for d = NonSingletonDimensions
@@ -341,7 +340,7 @@ if isempty(o.InitialDZ)
         fprintf('Initial estimate for dz=%e, refining.\n',dz);
     end
     % Root find to determine the dz for an error that is half the tolerated
-    % global error.  
+    % global error.
     dz = estimate_dz(o.TolGlobal*0.5,u0,U0,dz,X,KX,o.Callback.EvolveStep,o.Callback.OperatorLinear,o.Callback.OperatorNonlinear);
     if o.Trace
         fprintf('Initial stepsize refined to dz=%e.\n',dz);
@@ -351,14 +350,14 @@ else
 end
 
 
-%% Main loop.  
+%% Main loop.
 %
 % We iterate until any of the conditions for exit have been met, for
 % example exceeding the maximum number of iterations, maximum sample size
 % etc.
 n = 0; % Iteration counter.
 z = 0; % Current z position @bug Calculated by addition of floating point.
-% Size of the resized, new field.  
+% Size of the resized, new field.
 is_terminated_by_callback = 0; % Flag to indicate that a callback function requests exit.
 % True for each dimension of the field that requires enlarging in real
 % space.
@@ -395,7 +394,7 @@ dz_last=dz_try;
 % Force N_mesh to be zero so that the mesh is made.
 N_mesh = 0*N;
 n_timeout=0;
-% Used to control the restarting of an iteration. 
+% Used to control the restarting of an iteration.
 is_retry_iteration=0;
 is_final_step=0;
 is_ended=0;
@@ -405,19 +404,19 @@ while n < o.MaxIterations && ...
         ~is_ended
     % Start this iteration by assuming we won't retry the iteration.
     is_retry_iteration=0;
-
+    
     if(prod(N) > o.MaxN)
         throw(MException('SolveNLSE:Bailout','Grid size exceeds maximum'));
     end
     if (dz_try < o.MinDZ & ~is_final_step)
         throw(MException('SolveNLSE:Bailout','Step size is smaller than minimum'));
     end
-
+    
     % Call the begin iteration callback, if it is defined.
     if ~isempty(o.Callback.BeginIteration)
         is_terminated_by_callback = feval(o.Callback.BeginIteration);
     end
-
+    
     if o.Trace
         fprintf('Start attempt of step %d.\n',n);
     end
@@ -462,7 +461,7 @@ while n < o.MaxIterations && ...
         end
         n_timeout = n + o.Fudge1;
     end
-
+    
     % Check to see if the new field size differs from the previous field
     % size.  If so, regenerate the coordinate meshes.
     if any(N ~= N_mesh)
@@ -473,23 +472,68 @@ while n < o.MaxIterations && ...
         [KX{:}] = ndgrid(kx{:});
         N_mesh=N;
     end
-
+    
     % Check to see if the trial propagation distance dz_try exceeds the
     % maximum dz we have permitted (if any).  If so then cap it to the
-    % upper limit.
+    % upper limit. length is borked too
     if dz_try > o.MaxDZ
         if o.Trace
             fprintf('Trial dz step (%e) exceeds MaxDZ (%e) capping to upper limit. \n',dz_try,o.MaxDZ);
         end
         dz_try = min(dz_try,o.MaxDZ);
     end
-
+    
     % Propagate forwards one step of length dz and determine error
     % information using the supplied forward propagator.
     [local_error,u1,U1,uc,UC,uf,UF,U0] = ...
         o.Callback.EvolveStep(u0, U0, dz_try, X, KX, ...
         o.Callback.OperatorLinear, ...
         o.Callback.OperatorNonlinear);
+    
+    
+   % if mod(n,50)==0 %samples every 50 steps
+        global j waves initialsize;
+        if n ==0
+            waves.u= zeros(size(u0),100000);
+            waves.tau=x{1,1};
+            waves.z= zeros(1,100000);
+            initialsize=size(u0,1);
+        end
+        if size(u1,1)==initialsize
+            waves.u(:,(n)+1)=u1;
+            waves.z(:,(n)+1)=z;
+        else
+            waves.u(:,(n)+1)=interp1(u1,1:size(u1,1)/initialsize:size(u1,1),'spline');
+            waves.z(:,(n)+1)=z;
+        end
+        %for j=1:n
+  %   end
+%         try %%this will save the waveforms at their original size
+                % too much computation time, so saving them at lower
+                % resolution instead
+%             waves{j}.u(:,n+1)=u1;
+%             waves{j}.tau(:,n+1)=x{1,1};
+%             waves{j}.z(:,n+1)=z;
+%         catch
+%             %truncate matrices
+%             waves{j}.u(:,~any(waves{j}.u,1))=[];
+%             waves{j}.tau(:,~any(waves{j}.tau,1))=[];
+%             waves{j}.z=waves{j}.z(1:size(waves{j}.u,2));
+%             j=j+1;
+%             try 
+%                 size(waves{j}.u); %check if new matrices need pre-allocation
+%             catch
+%                 pack; %frees up memory, kind of.
+%                 waves{j}.u= zeros(size(u0),10000);%and pre allocate
+%                 waves{j}.tau= zeros(size(u0),10000);
+%                 waves{j}.z= zeros(1,10000);    
+%             end
+%             waves{j}.u(:,n+1)=u1;
+%             waves{j}.tau(:,n+1)=x{1,1};
+%             waves{j}.z(:,n+1)=z;
+%         end
+
+    
     if o.Trace
         fprintf('Trial propagation over a distance dz=%0.4e \n',dz_try);
     end
@@ -527,15 +571,15 @@ while n < o.MaxIterations && ...
             end
         end
     end
-
+    
     % Test to see if the field is aliased as a result of the propagation
     % step. If it is then we wish to rescale the initial field.
     for d = NonSingletonDimensions
         is_too_big_x(d)  = o.Callback.Mesh.IsAliasDown1(u1, o, d);
         is_too_big_kx(d) = o.Callback.Mesh.IsAliasDown1(U1, o, d);
     end
-
-
+    
+    
     % If the field is aliased in real space AND k space, nothing can be
     % done, the field is rubbish.  Since the field before starting
     % propagation should be fine the reason the field is now aliased in
@@ -546,7 +590,7 @@ while n < o.MaxIterations && ...
     %
     % @bug Perhaps we should also increase the spectral and spatial
     % representation.
-    if any(is_too_big_x & is_too_big_kx) 
+    if any(is_too_big_x & is_too_big_kx)
         if o.Trace
             fprintf('Field aliased in both real space and k space, reducing step size.\n');
         end
@@ -560,14 +604,14 @@ while n < o.MaxIterations && ...
     big_small_x = is_too_big_x & is_too_small_x;
     big_small_kx = is_too_big_kx & is_too_small_kx;
     
-
+    
     % If the field has, for example, propagated a long way it will have expanded outside
     % the boundary of the computational window.  If this is the case we
     % should enlarge the real space (interpolate k space) and try
     % propagating again.
     if any(is_too_big_x) % Only test if there is a dimension that's aliased.
         for d = NonSingletonDimensions
-            if is_too_big_x(d) 
+            if is_too_big_x(d)
                 % Get the size of the newly upscaled field along this dimension.
                 N_new(d) = o.Callback.Mesh.GetUpSize(N(d),o);
                 % Adjust the coordinate systems for this dimension based on
@@ -588,14 +632,14 @@ while n < o.MaxIterations && ...
             is_retry_iteration = 1;
         end
     end
-
+    
     % If the field has, for example, experienced a lot of nonlinearity its spectrum can
     % expand outside the computational window.  As with the real space
     % window this means we should expand the spectral representation
     % (interpolate real space).
     if any(is_too_big_kx)
         for d = NonSingletonDimensions
-            if is_too_big_kx(d) 
+            if is_too_big_kx(d)
                 N_new(d) = o.Callback.Mesh.GetUpSize(N(d),o);
                 [x{d},dx{d},kx{d},dkx{d}] = fftspace(x{d},N_new(d));
                 if o.Trace
@@ -618,11 +662,11 @@ while n < o.MaxIterations && ...
         dz_try = min([dz_try dz_next]);
         continue;
     end
-
-
+    
+    
     % At this point we have successfully completed an iteration, stepping
     % forward a distance dz_try.
-    z = z + dz_try;  
+    z = z + dz_try;
     
     
     % Call the begin iteration callback, if it is defined.
@@ -662,7 +706,7 @@ while n < o.MaxIterations && ...
         fprintf('Iteration %i, z=%f complete.\n\n',n,z);
     end
     
-
+    
     % Increment iteration counter.
     n = n + 1;
 end
@@ -703,7 +747,7 @@ N_new=N;
 % Check to see if we are working along a trivial (singleton) dimension.  If
 % so just exit.
 if N == 1
-    too_big = 0; too_small = 0; u=u; 
+    too_big = 0; too_small = 0; u=u;
     return
 end
 
@@ -719,7 +763,7 @@ end
 
 % Check to see if the field is over represented.  This is equivalent to it
 % not being aliased on the smaller grid.
-is_too_small  = ~o.Callback.Mesh.IsAliasDown2(u, o, dim); 
+is_too_small  = ~o.Callback.Mesh.IsAliasDown2(u, o, dim);
 if is_too_small
     if o.Trace
         fprintf('Field representation over specified, attempting truncation.\n');
@@ -727,8 +771,8 @@ if is_too_small
     %Determine the new number of samples to use for the function u.
     N_new = o.Callback.Mesh.GetDownSize(size(u,dim),o);
     
-    % Under certain circumstances it is possible for N_new > N i.e. 
-    % due to rounding error when we have a small number of samples. It is 
+    % Under certain circumstances it is possible for N_new > N i.e.
+    % due to rounding error when we have a small number of samples. It is
     % dependent on the (unknown) callback so anything is possible.
     %
     % We check to see if the proposed number of samples *is* smaller.  If
@@ -743,8 +787,8 @@ if is_too_small
         % Truncating the field, effectively filtering it with a
         % rectangular window, will raise the noise floor (wings)
         % of the associated domain.  We should therefore check that
-        % truncating the field as we intend does not end up causing 
-        % aliasing in the other domain 
+        % truncating the field as we intend does not end up causing
+        % aliasing in the other domain
         %
         % N.B. it could be either
         % fft2 or ifft2, it doesn't matter as we are only interested in the
@@ -793,7 +837,7 @@ end
 %
 %    When ISOK is zero (false) the returned step size is too large and any
 %    result obtained propagating over that distance should be discarded.
-function [dz,isok] = select_dz(dz,delta,delta_G) 
+function [dz,isok] = select_dz(dz,delta,delta_G)
 isok=1;
 % Determine new step size based on current step size and error targets.
 if delta >= 2*delta_G
@@ -811,21 +855,21 @@ end
 
 %ESTIMATE_DZ Determine an initial dz based on 4th order error behaviour.
 %
-%   Given an initial field, its Fourier representation and coordinate 
+%   Given an initial field, its Fourier representation and coordinate
 %   system and a (reasonable) estimate for dz functions describing the
 %   linear and nonlinear operators and the associated coordinate systems,
 %   this function attempts to determine a value of dz that satisfies the
-%   target error. 
+%   target error.
 %
 %   Providing the initial guess is within the range of dz values over which
 %   we expect to see cubic error behavior this works well.  If we are
 %   unwittingly outside this area the gradient of the line is likely to be
 %   significantly different from 3 and the goodness of fit (standard
-%   deviation of residuals) will be poor. 
+%   deviation of residuals) will be poor.
 %
 %   We then pick the dz which produces an error that is closest to the
 %   target error as the staring point.
-%   
+%
 %     DZ = ESTIMATE_DZ(TARGET_ERROR,U0, FFT_U0, DZ_0,X,KX, funLinear, funNonlinear);
 function [dz, actual_error] = estimate_dz(target_error, u0, U0, dz, ...
     X, ...
@@ -859,7 +903,7 @@ f_now   = f(x_now);
 % First test
 err_first = f_prior.^2;
 
-% We expect the root to be determined to the precision below within typically 3 iterations.  
+% We expect the root to be determined to the precision below within typically 3 iterations.
 % If it requires more than 6 iterations we should bail out -- we are probably in
 % a pathalogical region.
 TolRoot = 1E-9;
@@ -870,7 +914,7 @@ for n=1:6
     x_now = x_next;
     f_now = f(x_now);
     % Convergence test, if we are calculating rubbish (e.g. NaN Inf) then exit.
-    if ~isfinite(f_now) 
+    if ~isfinite(f_now)
         break
         % If the error is less than the tolerance and better than the
         % initial guess then we have found the root.
@@ -884,7 +928,7 @@ end
 
 
 %% CVS log information
-% 
+%
 % $Log: evolve.m,v $
 % Revision 1.10  2010/05/24 08:23:06  graceej
 % * Improved documentation.
