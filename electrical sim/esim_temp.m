@@ -58,7 +58,7 @@ end
 
 %time marching -- should have itcheck for convergence in solid-state system)
 for n=1:timesteps
-    voltage(:,n+1)= ((capmat + deltat*indmat)\(V(:,n)+source*deltat);
+    voltage(:,n+1)= ((capmat + deltat*indmat)\(V(:,n)+source*deltat));
 end
 figure;
 hold on
