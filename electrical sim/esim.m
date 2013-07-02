@@ -83,10 +83,20 @@ end
             
         end
     end
+    %do the LU decomposition
+    [LL,LU,LP] = lu((capmat + deltat*condmat));
+       % x= voltage(:,n+1
+    %A=(capmat + deltat*condmat)
+    %b=(capmat*voltage(:,n)+source*deltat)
+    %y=LL\LP*b
+    %x=LU\(LL\LP*b)
+    
     
     %time marching -- should have itcheck for convergence in solid-state system)
     for n=1:timesteps
-        voltage(:,n+1)= ((capmat + deltat*condmat)\(capmat*voltage(:,n)+source*deltat));
+        %voltage(:,n+1)= ((capmat + deltat*condmat)\(capmat*voltage(:,n)+source*deltat));
+        voltage(:,n+1)= LU\(LL\LP*(capmat*voltage(:,n)+source*deltat));
+
         %for setting voltage in the voltage vector
         
         
