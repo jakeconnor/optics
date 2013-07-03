@@ -6,7 +6,7 @@
 clear variables;
 timesteps = 10000; %this is embarrasingly arbitrary.
 deltat=0.01; %same as above
-nvoltage = input('Input number of voltage sources = ');
+nvoltage = input('Input number of independent voltage sources = ');
 
 if nvoltage==0; vsource.in=[]; vsource.out=[]; end
 for n=1:nvoltage
@@ -14,6 +14,29 @@ for n=1:nvoltage
     vsource.in(n) = input('Input Node = ');
     vsource.out(n) = input('Output Node = ');
     vsource.mag(n) = input('Output Voltage = ');
+end
+
+nvcvs = input('Input number of VCVSs = ');
+
+if nvcvs==0; vcvs.in=[]; vcvs.out=[]; end
+for n=1:nvcvs
+    fprintf('Voltage Source %g \n',n);
+    vcvs.readin(n) = input('Control  -ve = ');
+    vcvs.readout(n) = input('Control Voltage +ve = ');
+    vcvs.in(n) = input('Input Node = ');
+    vcvs.out(n) = input('Output Node = ');
+    vcvs.alpha(n) = input('Alpha Value = ');
+end
+nvcvs = input('Input number of delayed VCVSs = ');
+if nmem==0; mem.in=[]; mem.out=[]; end
+for n=1:nmem
+    fprintf('Voltage Source %g \n',n);
+    mem.readin(n) = input('Control  -ve = ');
+    mem.readout(n) = input('Control Voltage +ve = ');
+    mem.in(n) = input('Input Node = ');
+    mem.out(n) = input('Output Node = ');
+    mem.alpha(n) = input('Alpha Value = ');
+    mem.delay(n) = input('Delay Time (seconds')/deltat; %delay in steps
 end
 
 nresist = input('Input number of resistors = ');
@@ -44,9 +67,11 @@ for n=1:nind
 end
 %calculate number of nodesand branches (components)
 nnodes = max([ max([vsource.out]) max([resistor.out]) max([cap.out]) ...
-    max([vsource.in]) max([resistor.in]) max([cap.in]) max([ind.in]) max([ind.out]) ]);
+    max([vsource.in]) max([resistor.in]) max([cap.in]) max([ind.in]) ...
+    max([ind.out]) max([vcvs.in]) max([vcvs.out])  ]);
 
-matsize= nnodes + size(vsource.mag,1) + size(ind.in,1);%plus buffer columns for sources
+matsize= nnodes + size(vsource.mag,1) + ...
+    size(ind.in,1) + size(vcvs.in,1);%plus buffer columns for sources
 
 condmat = spalloc(matsize,matsize,2*size(resistor.in,2));
 capmat = spalloc(matsize,matsize,2*size(cap.in,2));
@@ -67,6 +92,22 @@ for n=1:nvoltage
     %     if vsource.out(n)~=0; source(vsource.out(n),1)=vsource.mag(n); end
     
 end
+for n=1:nvcvs
+    if vcvs.readin(n)~=0; condmat(nnodes+nvoltage+n,vcvs.readin(n))=1; end
+    if vcvs.readout(n)~=0; condmat(nnodes+nvoltage+n,vcvs.readout(n))=-1; end
+    if vcvs.in(n)~=0;
+        condmat(nnodes+nvoltage+n,vcvs.in(n))=condmat(nnodes+nvoltage+n,vcvs.in(n))-vcvs.alpha(n);
+        condmat(vcvs.in(n),nnodes+nvoltage+n)=condmat(vcvs.in(n),nnodes+nvoltage+n)-1;
+    end
+    if vcvs.out(n)~=0;
+        condmat(nnodes+nvoltage+n,vcvs.out(n))=condmat(nnodes+nvoltage+n,vcvs.out(n))+vcvs.alpha(n);
+        condmat(vcvs.out(n),nnodes+nvoltage+n)=condmat(vcvs.out(n),nnodes+nvoltage+n)+1;
+    end
+
+    
+end
+
+
 for n=1:nresist
     if resistor.in(n)~=0;
         condmat(resistor.in(n),resistor.in(n))= condmat(resistor.in(n),resistor.in(n)) + 1/resistor.mag(n);
