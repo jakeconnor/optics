@@ -27,7 +27,8 @@ for n=1:nvcvs
     vcvs.out(n) = input('Output Node = ');
     vcvs.alpha(n) = input('Alpha Value = ');
 end
-nvcvs = input('Input number of delayed VCVSs = ');
+
+nmem = input('Input number of delayed VCVSs = ');
 if nmem==0; mem.in=[]; mem.out=[]; end
 for n=1:nmem
     fprintf('Voltage Source %g \n',n);
@@ -36,7 +37,7 @@ for n=1:nmem
     mem.in(n) = input('Input Node = ');
     mem.out(n) = input('Output Node = ');
     mem.alpha(n) = input('Alpha Value = ');
-    mem.delay(n) = input('Delay Time (seconds')/deltat; %delay in steps
+    mem.delay(n) = input('Delay Time (seconds) = ')/deltat; %delay in steps
 end
 
 nresist = input('Input number of resistors = ');
@@ -68,10 +69,10 @@ end
 %calculate number of nodesand branches (components)
 nnodes = max([ max([vsource.out]) max([resistor.out]) max([cap.out]) ...
     max([vsource.in]) max([resistor.in]) max([cap.in]) max([ind.in]) ...
-    max([ind.out]) max([vcvs.in]) max([vcvs.out])  ]);
+    max([ind.out]) max([vcvs.in]) max([vcvs.out]) max([mem.in]) max([mem.out]) ]);
 
 matsize= nnodes + size(vsource.mag,1) + ...
-    size(ind.in,1) + size(vcvs.in,1);%plus buffer columns for sources
+    size(ind.in,1) + size(vcvs.in,1) + size(mem.in,1);%plus buffer columns for sources
 
 condmat = spalloc(matsize,matsize,2*size(resistor.in,2));
 capmat = spalloc(matsize,matsize,2*size(cap.in,2));
@@ -89,9 +90,8 @@ for n=1:nvoltage
     end
     source(nnodes+n)=vsource.mag(n);
     
-    %     if vsource.out(n)~=0; source(vsource.out(n),1)=vsource.mag(n); end
-    
 end
+
 for n=1:nvcvs
     if vcvs.readin(n)~=0; condmat(nnodes+nvoltage+n,vcvs.readin(n))=1; end
     if vcvs.readout(n)~=0; condmat(nnodes+nvoltage+n,vcvs.readout(n))=-1; end
@@ -103,8 +103,19 @@ for n=1:nvcvs
         condmat(nnodes+nvoltage+n,vcvs.out(n))=condmat(nnodes+nvoltage+n,vcvs.out(n))+vcvs.alpha(n);
         condmat(vcvs.out(n),nnodes+nvoltage+n)=condmat(vcvs.out(n),nnodes+nvoltage+n)+1;
     end
+end
 
-    
+
+for n=1:nmem
+    %for standard vector of voltage sources
+    if mem.in(n)~=0;
+        condmat(nnodes+nvoltage+nvcvs+n,mem.in(n)) = -1;
+    end
+    if mem.out(n)~=0;
+        condmat(nnodes+nvoltage+nvcvs+n,mem.out(n)) = 1;
+        condmat(mem.out(n),nnodes+nvoltage+nvcvs+n) = 1;
+    end
+    % NOPE source(nnodes+nvoltage+nvcvs+n)=mem.mag(n);
 end
 
 
@@ -137,12 +148,12 @@ end
 for n=1:nind
     if ind.in(n)~=0;
         %         capmat(cap.in(n),cap.in(n))= capmat(cap.in(n),cap.in(n)) + cap.mag(n);
-         condmat(nnodes+nvoltage+n,ind.in(n)) = -1;
-         condmat(ind.in(n),nnodes+nvoltage+n) = 1;
+        condmat(nnodes+nvoltage+n,ind.in(n)) = -1;
+        condmat(ind.in(n),nnodes+nvoltage+n) = 1;
     end
     if ind.out(n)~=0;
         %         capmat(cap.out(n),cap.out(n))= capmat(cap.out(n),cap.out(n)) + cap.mag(n);
-         condmat(ind.out(n),nnodes+nvoltage+n) = -1;
+        condmat(ind.out(n),nnodes+nvoltage+n) = -1;
         condmat(nnodes+nvoltage+n,ind.out(n)) = 1;
     end
     if ind.in(n)~=0 && ind.out(n)~=0;
@@ -169,9 +180,16 @@ voltage(:,1)=source;
 %time marching -- should have itcheck for convergence in solid-state system)
 for n=1:timesteps
     %voltage(:,n+1)= ((capmat + deltat*condmat)\(capmat*voltage(:,n)+source*deltat));
-    voltage(:,n+1)= LU\(LL\LP*(capmat*voltage(:,n)+source*deltat));
-    %for setting voltage in the voltage vector
+    for j=1:nmem
+        if n > mem.delay(j)
+            vdrop=0;
+            if mem.readin(j)~=0; vdrop = voltage(mem.readin(j),n-mem.delay(j)); end
+            if mem.readout(j) ~=0; vdrop = vdrop + voltage(mem.readout(j),n-mem.delay(j)); end
+            source(nnodes+nvoltage+nvcvs+j)= mem.alpha(j)*vdrop;          
+        end
+    end
     
+    voltage(:,n+1)= LU\(LL\LP*(capmat*voltage(:,n)+source*deltat));    
     
 end
 figure;
