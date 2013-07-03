@@ -13,7 +13,8 @@ for n=1:nvoltage
     fprintf('Voltage Source %g \n',n);
     vsource.in(n) = input('Input Node = ');
     vsource.out(n) = input('Output Node = ');
-    vsource.mag(n) = input('Output Voltage = ');
+    vsource.o(n) = input('Is Voltage Constant/Repeating (1), or not (0) = ');
+    vsource.mag = input('Voltage (input a [matrix] to vary over time) = ');
 end
 
 nvcvs = input('Input number of VCVSs = ');
@@ -76,7 +77,7 @@ matsize= nnodes + size(vsource.mag,1) + ...
 
 condmat = spalloc(matsize,matsize,2*size(resistor.in,2));
 capmat = spalloc(matsize,matsize,2*size(cap.in,2));
-source = zeros(matsize,1);
+source = zeros(matsize,timesteps);
 voltage = zeros(matsize,1);
 %now we put all the components in their respective matrices
 for n=1:nvoltage
@@ -88,7 +89,13 @@ for n=1:nvoltage
         condmat(nnodes+n,vsource.out(n)) = 1;
         condmat(vsource.out(n),nnodes+n) = 1;
     end
-    source(nnodes+n)=vsource.mag(n);
+    if ~vsource.o(n)
+        source(nnodes+n,1:size(vsource.mag(n)),2)=vsource.mag(n);
+    else
+        for t=1:timesteps
+           source(nnodes+n,t)=vsource.mag(mod(t,size(vsource.mag,2))+1);
+        end
+    end
     
 end
 
@@ -161,8 +168,6 @@ for n=1:nind
         %         indmat(ind.out(n),ind.in(n)) = indmat(cap.out(n),cap.in(n)) - cap.mag(n);
     end
     capmat(nnodes+nvoltage+n,nnodes+nvoltage+n)=ind.mag(n);
-    
-    
 end
 
 
@@ -176,7 +181,6 @@ end
 %y=LL\LP*b
 %x=LU\(LL\LP*b)
 
-voltage(:,1)=source;
 %time marching -- should have itcheck for convergence in solid-state system)
 for n=1:timesteps
     %voltage(:,n+1)= ((capmat + deltat*condmat)\(capmat*voltage(:,n)+source*deltat));
@@ -185,11 +189,11 @@ for n=1:timesteps
             vdrop=0;
             if mem.readin(j)~=0; vdrop = voltage(mem.readin(j),n-mem.delay(j)); end
             if mem.readout(j) ~=0; vdrop = vdrop + voltage(mem.readout(j),n-mem.delay(j)); end
-            source(nnodes+nvoltage+nvcvs+j)= mem.alpha(j)*vdrop;          
+            source(nnodes+nvoltage+nvcvs+j,n)= mem.alpha(j)*vdrop;
         end
     end
     
-    voltage(:,n+1)= LU\(LL\LP*(capmat*voltage(:,n)+source*deltat));    
+    voltage(:,n+1)= LU\(LL\LP*(capmat*voltage(:,n)+source(:,n)*deltat));
     
 end
 figure;
