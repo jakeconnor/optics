@@ -158,13 +158,13 @@ end
 for n=1:nind
     if ind.in(n)~=0;
         %         capmat(cap.in(n),cap.in(n))= capmat(cap.in(n),cap.in(n)) + cap.mag(n);
-        condmat(nnodes+nvoltage+n,ind.in(n)) = -1;
-        condmat(ind.in(n),nnodes+nvoltage+n) = 1;
+        condmat(nnodes+nvoltage+nvcvs+n,ind.in(n)) = -1;
+        condmat(ind.in(n),nnodes+nvoltage+nvcvs+n) = 1;
     end
     if ind.out(n)~=0;
         %         capmat(cap.out(n),cap.out(n))= capmat(cap.out(n),cap.out(n)) + cap.mag(n);
-        condmat(ind.out(n),nnodes+nvoltage+n) = -1;
-        condmat(nnodes+nvoltage+n,ind.out(n)) = 1;
+        condmat(ind.out(n),nnodes+nvoltage+nvcvs+n) = -1;
+        condmat(nnodes+nvoltage+nvcvs+n,ind.out(n)) = 1;
     end
     if ind.in(n)~=0 && ind.out(n)~=0;
         %         indmat(ind.in(n),ind.out(n)) = indmat(cap.in(n),cap.out(n)) - cap.mag(n);
