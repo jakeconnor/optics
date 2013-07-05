@@ -7,6 +7,8 @@ clear variables;
 timesteps = 10000; %this is embarrasingly arbitrary.
 deltat=0.01; %same as above
 nvoltage = input('Input number of independent voltage sources = ');
+thresh=0.01; %more numbers pulled from thin air
+
 
 if nvoltage==0; vsource.in=[]; vsource.out=[]; end
 for n=1:nvoltage
@@ -17,6 +19,7 @@ for n=1:nvoltage
     vsource.mag = input('Voltage (input a [matrix] to vary over time) = ');
 end
 
+
 nvcvs = input('Input number of VCVSs = ');
 
 if nvcvs==0; vcvs.in=[]; vcvs.out=[]; end
@@ -26,7 +29,8 @@ for n=1:nvcvs
     vcvs.readout(n) = input('Control Voltage +ve = ');
     vcvs.in(n) = input('Input Node = ');
     vcvs.out(n) = input('Output Node = ');
-    vcvs.alpha(n) = input('Alpha Value = ');
+    vcvs.alpha{n} = input('Relation (use ''vdrop'' for voltage drop over control nodes) = ','s');
+    %this one uses a cell because its holding a string
 end
 
 nmem = input('Input number of delayed VCVSs = ');
@@ -74,10 +78,12 @@ nnodes = max([ max([vsource.out]) max([resistor.out]) max([cap.out]) ...
 
 matsize= nnodes + size(vsource.mag,1) + ...
     size(ind.in,1) + size(vcvs.in,1) + size(mem.in,1);%plus buffer columns for sources
-
+%pre allocate all our matrices
 condmat = spalloc(matsize,matsize,2*size(resistor.in,2));
 capmat = spalloc(matsize,matsize,2*size(cap.in,2));
 source = zeros(matsize,timesteps);
+nlvsource = zeros(matsize,1);
+nlvsource_old = zeros(matsize,1);
 voltage = zeros(matsize,1);
 %now we put all the components in their respective matrices
 for n=1:nvoltage
@@ -93,22 +99,19 @@ for n=1:nvoltage
         source(nnodes+n,1:size(vsource.mag(n)),2)=vsource.mag(n);
     else
         for t=1:timesteps
-           source(nnodes+n,t)=vsource.mag(mod(t,size(vsource.mag,2))+1);
+            source(nnodes+n,t)=vsource.mag(mod(t,size(vsource.mag,2))+1);
         end
     end
     
 end
 
 for n=1:nvcvs
-    if vcvs.readin(n)~=0; condmat(nnodes+nvoltage+n,vcvs.readin(n))=1; end
-    if vcvs.readout(n)~=0; condmat(nnodes+nvoltage+n,vcvs.readout(n))=-1; end
     if vcvs.in(n)~=0;
-        condmat(nnodes+nvoltage+n,vcvs.in(n))=condmat(nnodes+nvoltage+n,vcvs.in(n))-vcvs.alpha(n);
         condmat(vcvs.in(n),nnodes+nvoltage+n)=condmat(vcvs.in(n),nnodes+nvoltage+n)-1;
     end
     if vcvs.out(n)~=0;
-        condmat(nnodes+nvoltage+n,vcvs.out(n))=condmat(nnodes+nvoltage+n,vcvs.out(n))+vcvs.alpha(n);
         condmat(vcvs.out(n),nnodes+nvoltage+n)=condmat(vcvs.out(n),nnodes+nvoltage+n)+1;
+        condmat(nnodes+nvoltage+n,vcvs.out(n)) = 1;
     end
 end
 
@@ -183,18 +186,31 @@ end
 
 %time marching -- should have itcheck for convergence in solid-state system)
 for n=1:timesteps
-    %voltage(:,n+1)= ((capmat + deltat*condmat)\(capmat*voltage(:,n)+source*deltat));
-    for j=1:nmem
-        if n > mem.delay(j)
-            vdrop=0;
-            if mem.readin(j)~=0; vdrop = voltage(mem.readin(j),n-mem.delay(j)); end
-            if mem.readout(j) ~=0; vdrop = vdrop + voltage(mem.readout(j),n-mem.delay(j)); end
-            source(nnodes+nvoltage+nvcvs+j,n)= mem.alpha(j)*vdrop;
+    d_nlvs = inf*ones(matsize,1);
+    while max(abs(d_nlvs))>thresh
+        %voltage(:,n+1)= ((capmat + deltat*condmat)\(capmat*voltage(:,n)+source*deltat));
+        for j=1:nmem
+            if n > mem.delay(j)
+                vdrop=0;
+                if mem.readin(j)~=0; vdrop = -voltage(mem.readin(j),n-mem.delay(j)); end
+                if mem.readout(j) ~=0; vdrop = vdrop + voltage(mem.readout(j),n-mem.delay(j)); end
+                source(nnodes+nvoltage+nvcvs+j,n)= mem.alpha(j)*vdrop;
+            end
         end
+        voltage(:,n+1)= LU\(LL\LP*(capmat*voltage(:,n)+(source(:,n)+nlvsource)*deltat));
+        for j=1:nvcvs
+            vdrop=0; %calculating voltage drop to use in main calculations
+            if vcvs.readin(j)~=0; vdrop = -voltage(vcvs.readin(j),n+1); end
+            if vcvs.readout(j)~=0; vdrop = vdrop + voltage(vcvs.readout(j),n+1); end
+            nlvsource(nnodes+nvoltage+j)=eval(vcvs.alpha{j});
+        end
+        d_nlvs= (nlvsource-nlvsource_old);
+%         for i=1:nvcvs
+%             nlvsource(nnodes+nvoltage+i)=nlvsource(nnodes+nvoltage+i)+d_nlvs(nnodes+nvoltage+i);
+%         end
+        nlvsource_old=nlvsource;
+
     end
-    
-    voltage(:,n+1)= LU\(LL\LP*(capmat*voltage(:,n)+source(:,n)*deltat));
-    
 end
 figure;
 hold on
