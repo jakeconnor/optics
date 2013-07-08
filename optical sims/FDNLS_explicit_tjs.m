@@ -42,7 +42,7 @@ else
     time = 20;
     j = 1;
     beta1{j} = 1;
-    beta2{j} = -1e-5;
+    beta2{j} = 1e-5;
     N(j) = 0;
     loss{j} = 0e-1;
     %---set simulation parameters
@@ -93,7 +93,8 @@ end
 % g1(1,1)=1;
 % g1(1,step_num_z)=1/deltaz;
 
-pulsewidth_n = .3*step_num_z;
+pulsewidth_n = round(.3*step_num_z);
+
 % z = (-step_num_z/2:step_num_z/2-1) * deltaz; % space grid
 z2=-4*distance:8*distance/(pulsewidth_n-1):4*distance; %input wave, hopefully
 %---Input Field profile
@@ -133,8 +134,8 @@ for n=1:step_num_t-1
                deltat/beta1{j}*(-Gmat*X(:,n) + i*0.5*beta2{j}*dXdT2);
         
            Xp = X(:,n);
-           if (n > 2) Xpp = X(:,n-1); end
-           if (n > 3) Xppp = X(:,n-2); end
+           Xpp = Xp; 
+           Xppp = Xpp;
            
            dXdT = (X(:,n+1) - Xp)/deltat;
            dXdT2 = (2*X(:,n+1) - 5*Xp +4*Xpp - Xppp)/(deltat*deltat);
