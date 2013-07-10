@@ -83,13 +83,13 @@ else
     % 
     %                 t = tau*T0 + beta1*Ld*Z = tau*T0 + Toff;   
     
-    distance=5;% 
+    distance=15;% 
     sigma=0;
     
     % specify input parameters (Normalized)
-    beta2 = -1; % this captures actual beta2 value in Ld normalization
-    N = 0.0;
-    mshape = 0;%input('m = 0 for sech, m > 0 for super-Gaussian = '); % decided on input wave
+    beta2 = -0; % this captures actual beta2 value in Ld normalization
+    N = 2.0;
+    mshape = 1;%input('m = 0 for sech, m > 0 for super-Gaussian = '); % decided on input wave
     alpha = 0;
     ss = 0;
 
@@ -99,7 +99,7 @@ end
 % set simulation parameters
 nt = 1024; Tmax = 32; % FFT points and window size for graphs
 % step_num = round (20 * distance * N{1}^2); % No. of z steps
-step_num = 200;
+step_num = 500;
 deltaz = distance/step_num; % step size in z
 dtau = (2 * Tmax)/nt; % step size in tau (radians from z)
 
@@ -112,6 +112,7 @@ if mshape==0 % soliton sech shape creationg of input wave
 else % super-Gaussian (only seems to be real numbers)
     uu = exp(-0.5* (1+1i*chirp0).*tau.^(2*mshape));
 end
+uu0 = uu;
 
 % store dispersive phase shifts to speedup code
 lindispersion = exp(0.5i*beta2*omega.^2*deltaz-0.5*alpha*deltaz); %phase factor, includes alpha
@@ -133,7 +134,7 @@ for j=1:nt
     else
         G(j,j-1) = 1;
         G(j,j) = -2;
-        G(j,1) = 1;
+        G(j,j+1) = 1;
     end
 end
 G = G/(dtau*dtau);
@@ -141,17 +142,19 @@ G = G/(dtau*dtau);
 LG =  (D - deltaz*0.5i*beta2*G);
 [l,u] = lu(LG);
 
-duudt = fft(ifft(temp).*omega.^2);
-duuFDdt = G*tempFD';
+% uu2 = fft(ifft(temp));
+% 
+% duudt = -fft(ifft(temp).*omega.^2);
+% duuFDdt = G*tempFD';
 
 
 for n=1:step_num
     %calculating derivatives of wave in frequency and time domain
     
     
-    plot(abs(temp).^2);
-    hold
-    plot(abs(tempFD).^2,'r+');
+%     plot(abs(temp).^2);
+%     hold
+%     plot(abs(tempFD).^2,'r+');
 
     % Line Disp 
     f_temp = ifft(temp).*lindispersion; % step using dispersion decay (goes from wave 1-number; taking advantage of the way this loop works)
@@ -159,11 +162,11 @@ for n=1:step_num
     % 
     uuFD = (u\(l\(tempFD')))';
     
-    plot(abs(uu).^2,'bo');
-    plot(abs(uuFD).^2,'g*');
-    
-    drawnow();
-    pause(0.1)
+%     plot(abs(uu).^2,'bo');
+%     plot(abs(uuFD).^2,'g*');
+%     
+%     drawnow();
+%     pause(0.1)
     
     %non linear dispersion
     temp = uu.*exp((abs(uu).^2).*hhz); 
