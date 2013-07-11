@@ -4,11 +4,11 @@
 %for large circuits we should pre-allocate .in .out and .mag matrices,
 %but we won't be getting that large
 clear variables;
-timesteps = 10000; %this is embarrasingly arbitrary.
+timesteps = 5000; %this is embarrasingly arbitrary.
 deltat=0.01; %same as above
 nvoltage = input('Input number of independent voltage sources = ');
 thresh=0.01; %more numbers pulled from thin air
-
+%these comments are embarrasing
 
 if nvoltage==0; vsource.in=[]; vsource.out=[]; end
 for n=1:nvoltage
@@ -16,7 +16,7 @@ for n=1:nvoltage
     vsource.in(n) = input('Input Node = ');
     vsource.out(n) = input('Output Node = ');
     vsource.o(n) = input('Is Voltage Constant/Repeating (1), or not (0) = ');
-    vsource.mag = input('Voltage (input a [matrix] to vary over time) = ');
+    vsource.mag(n,:) = input('Voltage (input a [matrix] to vary over time) = ');
 end
 
 
@@ -44,6 +44,29 @@ for n=1:nmem
     mem.alpha(n) = input('Alpha Value = ');
     mem.delay(n) = input('Delay Time (seconds) = ')/deltat; %delay in steps
 end
+
+nphase = input('Input number of phase shifters = ');
+if nphase==0; phase.in=[]; phase.out=[]; end
+for n=1:nphase
+    fprintf('Phase Shift %g \n',n);
+    phase.in(n) = input('Input Node = ');
+    phase.out(n) = input('Output Node = ');
+    phase.alpha(n) = input('Alpha (<1 is loss) = '); %%this should be in exp(alpha) form for consistency
+    phase.phi(n) = input('Phase Shift (radians) = ');
+    phase.delay(n) = input('Delay Time (seconds) = ')/deltat; %delay in steps
+end
+
+ncoupler = input('Input number of fiber couplers = ');
+if ncoupler==0; coupler.ina=[]; coupler.outa=[]; coupler.inb=[]; coupler.outb=[]; end
+for n=1:ncoupler
+    coupler.ina(n) = input('Input node of fiber 1 = ');
+    coupler.outa(n) = input('Output node of fiber 1 = ');
+    coupler.inb(n) = input('Input node of fiber 2 = ');
+    coupler.outb(n) = input('Output node of fiber 2 = ');
+    coupler.coeff(n) = input('Coupling Coefficient = ');
+end
+
+
 
 nresist = input('Input number of resistors = ');
 if nresist==0; resistor.in=[]; resistor.out=[]; end
@@ -74,10 +97,14 @@ end
 %calculate number of nodesand branches (components)
 nnodes = max([ max([vsource.out]) max([resistor.out]) max([cap.out]) ...
     max([vsource.in]) max([resistor.in]) max([cap.in]) max([ind.in]) ...
-    max([ind.out]) max([vcvs.in]) max([vcvs.out]) max([mem.in]) max([mem.out]) ]);
+    max([ind.out]) max([vcvs.in]) max([vcvs.out]) max([mem.in])  ...
+    max([mem.out]) max([phase.in]) max([phase.out])             ]);
 
-matsize= nnodes + size(vsource.mag,1) + ...
-    size(ind.in,1) + size(vcvs.in,1) + size(mem.in,1);%plus buffer columns for sources
+matsize= nnodes + size(vsource.mag,2) + ...
+    size(ind.in,2) + size(vcvs.in,2) + size(mem.in,2) + size(phase.in,2);
+%plus buffer columns for sources
+
+
 %pre allocate all our matrices
 condmat = spalloc(matsize,matsize,2*size(resistor.in,2));
 capmat = spalloc(matsize,matsize,2*size(cap.in,2));
@@ -96,10 +123,10 @@ for n=1:nvoltage
         condmat(vsource.out(n),nnodes+n) = 1;
     end
     if ~vsource.o(n)
-        source(nnodes+n,1:size(vsource.mag(n)),2)=vsource.mag(n);
+        source(nnodes+n,1:size(vsource.mag(n),2))=vsource.mag(n,:);
     else
         for t=1:timesteps
-            source(nnodes+n,t)=vsource.mag(mod(t,size(vsource.mag,2))+1);
+            source(nnodes+n,t)=vsource.mag(mod(t,size(vsource.mag(n),2))+1,t);
         end
     end
     
@@ -126,6 +153,34 @@ for n=1:nmem
         condmat(mem.out(n),nnodes+nvoltage+nvcvs+n) = 1;
     end
     % NOPE source(nnodes+nvoltage+nvcvs+n)=mem.mag(n);
+end
+
+for n=1:nphase
+    %for standard vector of voltage sources
+    if phase.in(n)~=0;
+        %         condmat(nnodes+nvoltage+nvcvs+nmem+n,phase.in(n)) = -1;
+        condmat(phase.in(n),nnodes+nvoltage+nvcvs+nmem+n)=-1;
+    end
+    if phase.out(n)~=0;
+        condmat(nnodes+nvoltage+nvcvs+nmem+n,phase.out(n)) = 1;
+        condmat(phase.out(n),nnodes+nvoltage+nvcvs+nmem+n) = 1;
+    end
+end
+%this might be a coupler
+for n=1:ncoupler
+    if coupler.ina(n)~=0 && coupler.outa(n)~=0
+        condmat(coupler.outa(n),coupler.ina(n))=sqrt(1-coupler.coeff(n));
+    end
+    if coupler.ina(n)~=0 && coupler.outb(n)~=0
+        condmat(coupler.outb(n),coupler.ina(n))=sqrt(coupler.coeff(n));
+    end
+    if coupler.inb(n)~=0 && coupler.outa(n)~=0
+        condmat(coupler.outa(n),coupler.inb(n))=sqrt(coupler.coeff(n));
+    end
+    if coupler.inb(n)~=0 && coupler.outb(n)~=0
+        condmat(coupler.outb(n),coupler.inb(n))=sqrt(1-coupler.coeff(n));
+    end
+    
 end
 
 
@@ -197,25 +252,44 @@ for n=1:timesteps
                 source(nnodes+nvoltage+nvcvs+j,n)= mem.alpha(j)*vdrop;
             end
         end
+        for j=1:nphase
+            if n > phase.delay(j)
+                source(nnodes+nvoltage+nvcvs+nmem+j,n)= phase.alpha(j)*exp(-1i*phase.phi(j))*voltage(phase.in(j),n-phase.delay(j));
+            end
+        end
+        
+        
         voltage(:,n+1)= LU\(LL\LP*(capmat*voltage(:,n)+(source(:,n)+nlvsource)*deltat));
         for j=1:nvcvs
-            vdrop=0; %calculating voltage drop to use in main calculations
+            vdrop =0; %calculating voltage drop to use in main calculations
             if vcvs.readin(j)~=0; vdrop = -voltage(vcvs.readin(j),n+1); end
             if vcvs.readout(j)~=0; vdrop = vdrop + voltage(vcvs.readout(j),n+1); end
             nlvsource(nnodes+nvoltage+j)=eval(vcvs.alpha{j});
         end
         d_nlvs= (nlvsource-nlvsource_old);
-%         for i=1:nvcvs
-%             nlvsource(nnodes+nvoltage+i)=nlvsource(nnodes+nvoltage+i)+d_nlvs(nnodes+nvoltage+i);
-%         end
+        %         for i=1:nvcvs
+        %             nlvsource(nnodes+nvoltage+i)=nlvsource(nnodes+nvoltage+i)+d_nlvs(nnodes+nvoltage+i);
+        %         end
         nlvsource_old=nlvsource;
-
+        
     end
 end
 figure;
 hold on
-for n=1:nnodes
-    plot(voltage(n,:),n*deltat);
+
+%plot nicely
+for n=1:matsize
+    subplot(matsize,1,n);
+    plot(1:timesteps+1,real(voltage(n,:)),1:timesteps+1,imag(voltage(n,:)));
+    if n <= nnodes
+        ts =  strcat('Node 0',num2str(n));
+        title(ts);
+        ylabel('Voltage (V)');
+    else
+        ts =  strcat('Source 0',num2str(n));
+        title(ts);
+        ylabel('Current (A)');
+    end
 end
 
 
