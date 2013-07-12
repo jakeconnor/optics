@@ -5,7 +5,8 @@ clear;
 close all
 set(0,'DefaultFigureWindowStyle','docked')
 
-UserInput = input('User Input? 1 or 0');
+UserInput = 0;
+% UserInput = input('User Input? 1 or 0');
 
 if(UserInput)
     number = 1; %input('Number of waves = ');
