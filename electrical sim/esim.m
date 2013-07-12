@@ -100,7 +100,7 @@ nnodes = max([ max([vsource.out]) max([resistor.out]) max([cap.out]) ...
     max([ind.out]) max([vcvs.in]) max([vcvs.out]) max([mem.in])  ...
     max([mem.out]) max([phase.in]) max([phase.out])             ]);
 
-matsize= nnodes + size(vsource.mag,2) + ...
+matsize= nnodes + size(vsource.mag,1) + ...
     size(ind.in,2) + size(vcvs.in,2) + size(mem.in,2) + size(phase.in,2);
 %plus buffer columns for sources
 
@@ -126,7 +126,9 @@ for n=1:nvoltage
         source(nnodes+n,1:size(vsource.mag(n),2))=vsource.mag(n,:);
     else
         for t=1:timesteps
-            source(nnodes+n,t)=vsource.mag(mod(t,size(vsource.mag(n),2))+1,t);
+            tmp = mod(t,size(vsource.mag,2));
+%             source(nnodes+n,t)=vsource.mag(n, mod( t ,size(vsource.mag(n),2))+1);
+            source(nnodes+n,t)= vsource.mag(n, tmp+1);
         end
     end
     
@@ -157,10 +159,6 @@ end
 
 for n=1:nphase
     %for standard vector of voltage sources
-    if phase.in(n)~=0;
-        %         condmat(nnodes+nvoltage+nvcvs+nmem+n,phase.in(n)) = -1;
-        condmat(phase.in(n),nnodes+nvoltage+nvcvs+nmem+n)=-1;
-    end
     if phase.out(n)~=0;
         condmat(nnodes+nvoltage+nvcvs+nmem+n,phase.out(n)) = 1;
         condmat(phase.out(n),nnodes+nvoltage+nvcvs+nmem+n) = 1;
@@ -280,12 +278,13 @@ hold on
 %plot nicely
 for n=1:matsize
     subplot(matsize,1,n);
-    plot(1:timesteps+1,real(voltage(n,:)),1:timesteps+1,imag(voltage(n,:)));
     if n <= nnodes
+        plot(1:timesteps+1,real(voltage(n,:)),1:timesteps+1,imag(voltage(n,:)));
         ts =  strcat('Node 0',num2str(n));
         title(ts);
         ylabel('Voltage (V)');
     else
+        plot(1:timesteps+1,-real(voltage(n,:)),1:timesteps+1,-imag(voltage(n,:)));
         ts =  strcat('Source 0',num2str(n));
         title(ts);
         ylabel('Current (A)');
