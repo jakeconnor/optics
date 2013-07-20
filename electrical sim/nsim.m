@@ -24,7 +24,7 @@ catch
 	return
 end
 for n=1:size(name); p1{n}=str2num(p1{n}); p2{n}=str2num(p2{n}); end
-%could just read in ints, but this keeps indexing consistent
+%could just read in ints, but this keeps indexing consistent (otherwise matlab turns these into [])
 
 %preallocate matrices (we'll sparse them later)
 nnodes=max(max([ cell2mat(p1) cell2mat(p2) ])); capmat = zeros(nnodes); condmat = zeros(nnodes);
@@ -35,9 +35,9 @@ vlist=[]; rlist=[]; clist=[]; llist=[]; dlist=[]; elist=[]; xlist=[]; plist=[];
 
 %add all our components
 for j=1:length(name)
-	switch(name{j}(1))
+	switch(name{j}(1)) %checks first character of name (handles non-unique names fine)
 	case 'V'
-		nirow=nirow+1;
+		nirow=nirow+1; %add a current row for each component that needs one.
 		vlist=[vlist j;nirow];
 		%appends location of coponents in netlist, and their assoscated current row for later use
 		Inames(nirow,:)=name{j}; %name for graphing later
@@ -75,7 +75,7 @@ for j=1:length(name)
 		p3{j}=str2num(p3{j}); 
 	case 'P'
 		nirow=nirow+1;
-		plist=[plist j];
+		plist=[plist j; nirow];
 		Inames(nirow,:)=name{j};
 		if p2{j}~=0
 			condmat(nnodes+nirow,p2{j})=1;
@@ -130,27 +130,30 @@ for j=1:length(name)
 		llist=[llist j;nirow];
 		Inames(nirow,:)=name{j}; 
 		if p1{j}~=0;
-			condmat(nnodes+nirow,ind.in(n)) = -1;
-			condmat(ind.in(n),nnodes+nirow) = 1;
+			condmat(nnodes+nirow,p1{j}) = -1;
+			condmat(p1{j},nnodes+nirow) = 1;
 		end
 		if p2{j}~=0;
-			condmat(ind.out(n),nnodes+nirow) = -1;
-			condmat(nnodes+nirow,ind.out(n)) = 1;
+			condmat(p2{j},nnodes+nirow) = -1;
+			condmat(nnodes+nirow,p2{j}) = 1;
 		end
 		if p1{j}~=0 && p2{j}~=0; %%I have no idea what I did here. I'm sure something belongs here
 		end  	
 		capmat(nnodes+nirow,nnodes+nirow)=p3{j};
 	end
 end
-%now having added lines to condmat, we need to make capmat the same size
-capmat=[capmat 						zeros(size(capmat,1),nirow);...
-		zeros(nirow,size(capmat,2))	zeros(nirow)				]
+%now having added lines to condmat, we need to make capmat the same size. source sometimes too
+capmat=[capmat 						zeros(size(capmat,1),size(condmat,2)-size(capmat,2));...
+		zeros(size(condmat,1)-size(capmat,1),size(capmat,2))	zeros(size(condmat,1)-size(capmat,1))	];
 
 %that done, define our matrices for actual math using LU decomp.
 [LL,LU,LP]=lu(sparse(capmat)+deltat*sparse(condmat)); %leaves cap&cond in full form for analysis
 													%but completes the LU facotrization for speed
 %more pre-allocations													
 matsize=size(condmat,1);
+source=[source; zeros(nnodes+nirow-size(source,1),size(source,2))];
+
+
 nlvsource = zeros(matsize,1);
 nlvsource_old = zeros(matsize,1);
 voltage = zeros(matsize,timesteps);
@@ -171,7 +174,7 @@ for t=1:timesteps
 		for nn=1:size(plist,2)
 			j=plist(1,nn);
 			if t>p5{j}
-				source(nnodes+plist(1,nn),t)=voltage(p1{j},t-p5{j})*exp(-1*i*p4{j})*exp(-0.5*p3{j});
+				source(nnodes+plist(2,nn),t)=voltage(p1{j},t-p5{j})*exp(-1*i*eval(p4{j}))*exp(-0.5*p3{j});
 			end
 		end
 		voltage(:,t+1)= LU\(LL\LP*(capmat*voltage(:,t)+(source(:,t)+nlvsource)*deltat)); %MATH!
@@ -187,7 +190,6 @@ for t=1:timesteps
 		nlvsource_old=nlvsource; %set current to old for next round's comparison
 	end
 end
-
 
 figure; %plot the results
 for n=1:(nnodes+nirow)
