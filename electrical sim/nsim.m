@@ -8,12 +8,13 @@
 %  Voltage Controlled Voltage Source			E# In Out ControlIn ControlOut Alpha
 %  Optical Coupler								X# In Out In 		Out 	   CouplingCoeff
 %  Phase Shift									P# In Out Alpha		Phi		   Delay
+%  Fiber or Waveguide							F# In Out Length    Beta1      N     Loss
 %		input variables 					  name p1 p2  p3		p4			p5    p6
 % i reserved for sqrt(-1)
 
 clear variables;
-timesteps = 5000; %how long to simulate for
-deltat=0.01; % time in seconds for time step
+timesteps = 2000; %how long to simulate for
+deltat=0.00000002; % time in seconds for time step
 thresh=0.01; %accuracy of newton-rhapson loops for NLVCVs 
 
 %read in netlist here 
@@ -30,7 +31,7 @@ for n=1:size(name); p1{n}=str2num(p1{n}); p2{n}=str2num(p2{n}); end
 nnodes=max(max([ cell2mat(p1) cell2mat(p2) ])); capmat = zeros(nnodes); condmat = zeros(nnodes);
 
 nirow = 0; %current row counter for voltage sources, to keep track from one component to the next
-vlist=[]; rlist=[]; clist=[]; llist=[]; dlist=[]; elist=[]; xlist=[]; plist=[];
+vlist=[]; rlist=[]; clist=[]; llist=[]; dlist=[]; elist=[]; xlist=[]; plist=[]; flist=[]; fdt=[];
 %make lists to keep track of which components exist where, will be useful for components needing extra-matrix math
 
 %add all our components
@@ -66,7 +67,7 @@ for j=1:length(name)
 		dlist=[dlist j;nirow];
 		Inames(nirow,:)=name{j}; 
 		p5{j}=str2num(p5{j}); 
-		p6{j}=str2num(p6{j})/deltat; %make it a number and convert it to steps for later
+		p6{j}=str2num(p6{j}); 
 		if p1{j}~=0; condmat(nnodes+nirow,p1{j})=-1; end
 		if p2{j}~=0
 			condmat(nnodes+nirow,p2{j})=1;
@@ -79,7 +80,7 @@ for j=1:length(name)
 		Inames(nirow,:)=name{j};
 		if p2{j}~=0
 			condmat(nnodes+nirow,p2{j})=1;
-			condmat(p2{j},nnodes+nirow)=1;
+		    condmat(p2{j},nnodes+nirow)=1;
 		end
 	case 'X'
 		nirow=nirow+1;
@@ -140,8 +141,27 @@ for j=1:length(name)
 		if p1{j}~=0 && p2{j}~=0; %%I have no idea what I did here. I'm sure something belongs here
 		end  	
 		capmat(nnodes+nirow,nnodes+nirow)=p3{j};
+	case 'F'
+		nirow=nirow+1;
+		flist=[flist [j; nirow]];
+		Inames(nirow,:)=name{j};
+		p3{j}=str2num(p3{j});
+		p4{j}=str2num(p4{j});
+		p5{j}=str2num(p5{j});
+		p6{j}=str2num(p6{j});
+		fiber{j} = fdfiber(p3{j},p4{j},p5{j},p6{j});
+		if p2{j}~=0
+			condmat(nnodes+nirow,p2{j})=1;
+			condmat(p2{j},nnodes+nirow)=1;
+        end
+        fiber{j}.plotting=0;
+        fdt = [fdt fiber{j}.deltat];
 	end
 end
+
+condmat=[condmat zeros(size(condmat,1),nnodes+nirow-size(condmat,2));
+       zeros(nnodes+nirow-size(condmat,1),size(condmat,1))... 
+                zeros(nnodes+nirow-size(condmat,2),nnodes+nirow-size(condmat,1)) ];
 %now having added lines to condmat, we need to make capmat the same size. source sometimes too
 capmat=[capmat 						zeros(size(capmat,1),size(condmat,2)-size(capmat,2));...
 		zeros(size(condmat,1)-size(capmat,1),size(capmat,2))	zeros(size(condmat,1)-size(capmat,1))	];
@@ -177,6 +197,13 @@ for t=1:timesteps
 				source(nnodes+plist(2,nn),t)=voltage(p1{j},t-p5{j})*exp(-1*i*eval(p4{j}))*exp(-0.5*p3{j});
 			end
 		end
+
+		for nn=1:size(flist,2) %for optical fiber
+			j=flist(1,nn); %call the object relevant to the fiber, drop output in voltage source vector
+			fiber{j}=fiber{j}.simulateFiber(voltage(p1{j},t),deltat);
+            source(nnodes+flist(2,nn),t)=fiber{j}.Vout;
+		end
+
 		voltage(:,t+1)= LU\(LL\LP*(capmat*voltage(:,t)+(source(:,t)+nlvsource)*deltat)); %MATH!
 		%now reconsider nonlinear voltage courses 
 		%(at t>1 the above calc uses previous steps vopltages as first guess)
