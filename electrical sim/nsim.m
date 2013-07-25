@@ -9,10 +9,14 @@
 %  Optical Coupler								X# In Out In 		Out 	   CouplingCoeff
 %  Phase Shift									P# In Out Alpha		Phi		   Delay
 %  Fiber or Waveguide							F# In Out Length    Beta1      N     Loss
+%  Splitter                                     S# In Out Out
+%  Joiner                                       J# In In  Out
 %		input variables 					  name p1 p2  p3		p4			p5    p6
 % i reserved for sqrt(-1)
 
-% clear all; clear classes;
+ clear variables;
+% todo: adjust timesteps and deltat based on something other than random
+% numbers
 timesteps = 2000; %how long to simulate for
 deltat=0.00000002; % time in seconds for time step
 thresh=0.01; %accuracy of newton-rhapson loops for NLVCVs 
@@ -31,7 +35,8 @@ for n=1:size(name); p1{n}=str2num(p1{n}); p2{n}=str2num(p2{n}); end
 nnodes=max(max([ cell2mat(p1) cell2mat(p2) ])); capmat = zeros(nnodes); condmat = zeros(nnodes);
 
 nirow = 0; %current row counter for voltage sources, to keep track from one component to the next
-vlist=[]; rlist=[]; clist=[]; llist=[]; dlist=[]; elist=[]; xlist=[]; plist=[]; flist=[]; fdt=[];
+vlist=[]; rlist=[]; clist=[]; llist=[]; dlist=[]; elist=[]; xlist=[]; 
+plist=[]; flist=[]; fdt=[]; slist=[]; jlist=[];
 %make lists to keep track of which components exist where, will be useful for components needing extra-matrix math
 
 %add all our components
@@ -39,7 +44,7 @@ for j=1:length(name)
 	switch(name{j}(1)) %checks first character of name (handles non-unique names fine)
 	case 'V'
 		nirow=nirow+1; %add a current row for each component that needs one.
-		vlist=[vlist j;nirow];
+		vlist=[vlist [j;nirow]];
 		%appends location of coponents in netlist, and their assoscated current row for later use
 		Inames(nirow,:)=name{j}; %name for graphing later
 		p3{j}=str2num(p3{j}); %needs to be a number (or matrix of)
@@ -64,7 +69,7 @@ for j=1:length(name)
 		end
 	case 'D'
 		nirow=nirow+1;
-		dlist=[dlist j;nirow];
+		dlist=[dlist [j;nirow]];
 		Inames(nirow,:)=name{j}; 
 		p5{j}=str2num(p5{j}); 
 		p6{j}=str2num(p6{j}); 
@@ -80,12 +85,12 @@ for j=1:length(name)
 		Inames(nirow,:)=name{j};
 		if p2{j}~=0
 			condmat(nnodes+nirow,p2{j})=1;
-		    condmat(p2{j},nnodes+nirow)=1;
+			condmat(p2{j},nnodes+nirow)=1;
 		end
 	case 'X'
 		nirow=nirow+1;
 		xlist=[xlist j;nirow];
-		Inames(nirow)=name{j}; 
+		Inames(nirow,:)=name{j}; 
 		p5{j}=str2num(p5{j}); 
 		if p1{j}~=0 && p2{j}~=0
 			condmat(p2{j},p1{j})=sqrt(1-p5{j});
@@ -99,6 +104,49 @@ for j=1:length(name)
 		if p2{j}~=0 && p4{j} ~=0
 			condmat(p4{j},p2{j})=sqrt(1-p5{j});
 		end
+	case 'S'
+		slist=[slist j];
+		nirow=nirow+1;
+		p3{j}=str2num(p3{j});
+		Inames(nirow,:)=name{j};
+		
+		%calla doesnt like this
+		condmat(nnodes+nirow,p1{j})=0.5;
+		condmat(nnodes+nirow,p2{j})=-1/sqrt(2);
+		condmat(p2{j},nnodes+nirow)=1;
+		nirow=nirow+1;
+		condmat(nnodes+nirow,p1{j})=0.5;
+		condmat(nnodes+nirow,p3{j})=-1/sqrt(2);
+		condmat(p3{j},nnodes+nirow)=1;
+
+
+
+		%here lies our failed attempts at making this work right.
+		% condmat(p1{j},p1{j})=condmat(p1{j},p1{j})+1;
+		% condmat(p2{j},p1{j})=condmat(p1{j},p2{j})-1/(sqrt(2));
+		% condmat(p3{j},p1{j})=condmat(p1{j},p3{j})-1/(sqrt(2));
+		% condmat(p2{j},p2{j})=condmat(p1{j},p2{j})+1;
+		% condmat(p3{j},p3{j})=condmat(p1{j},p3{j})+1;
+		% condmat(nnodes+nirow,p1{j})=1;
+		% condmat(nnodes+nirow,p2{j})=-1/sqrt(2);
+		% condmat(nnodes+nirow,p3{j})=-1/sqrt(2);
+		% condmat(p2{j},nnodes+nirow)=1;
+		% condmat(p3{j},nnodes+nirow)=1;
+		% condmat(p1{j},nnodes+nirow)=-1;
+	case 'J'
+		nirow=nirow+1;
+		Inames(nirow,:)=name{j}; 
+		jlist=[jlist [j;nirow]];
+		p3{j}=str2num(p3{j});
+		% condmat(p1{j},p3{j}) =condmat(p1{j},p3{j})+1;
+		% condmat(p2{j},p3{j}) =condmat(p2{j},p3{j})+1;
+		% condmat(p1{j},p1{j}) =condmat(p1{j},p1{j})-sqrt(2);
+		% condmat(p2{j},p2{j}) =condmat(p2{j},p2{j})-sqrt(2);
+		condmat(nnodes+nirow,p1{j})=-sqrt(2);
+		condmat(nnodes+nirow,p2{j})=-sqrt(2);
+		%she doesnt like this either, but the results check out. 
+		condmat(nnodes+nirow,p3{j})=2;
+		condmat(p3{j},nnodes+nirow)=1;
 	case 'R'
 		rlist=[rlist j];
 		p3{j}=str2num(p3{j}); 
@@ -109,8 +157,8 @@ for j=1:length(name)
 			condmat(p2{j},p2{j})=condmat(p2{j},p2{j}) + 1/p3{j};
 		end
 		if p1{j}~=0 && p2{j}~=0
-			condmat(p1{j},p2{j})=condmat(p1{j},p2{j}) + 1/p3{j};
-			condmat(p2{j},p1{j})=condmat(p2{j},p1{j}) + 1/p3{j};
+			condmat(p1{j},p2{j})=condmat(p1{j},p2{j}) - 1/p3{j};
+			condmat(p2{j},p1{j})=condmat(p2{j},p1{j}) - 1/p3{j};
 		end
 	case 'C'
 		clist=[clist j];
@@ -122,8 +170,8 @@ for j=1:length(name)
 			capmat(p2{j},p2{j})=capmat(p2{j},p2{j}) + p3{j};
 		end
 		if p1{j}~=0 && p2{j}~=0
-			capmat(p1{j},p2{j})=capmat(p1{j},p2{j}) + p3{j};
-			capmat(p2{j},p1{j})=capmat(p2{j},p1{j}) + p3{j};
+			capmat(p1{j},p2{j})=capmat(p1{j},p2{j}) - p3{j};
+			capmat(p2{j},p1{j})=capmat(p2{j},p1{j}) - p3{j};
 		end
 	case 'L'
 		p3{j}=str2num(p3{j}); 
@@ -153,15 +201,15 @@ for j=1:length(name)
 		if p2{j}~=0
 			condmat(nnodes+nirow,p2{j})=1;
 			condmat(p2{j},nnodes+nirow)=1;
-        end
-        fiber{j}.plotting=1;
-        fdt = [fdt fiber{j}.deltat];
+		end
+		fiber{j}.plotting=1;
+		fdt = [fdt fiber{j}.deltat];
 	end
 end
 
 condmat=[condmat zeros(size(condmat,1),nnodes+nirow-size(condmat,2));
-       zeros(nnodes+nirow-size(condmat,1),size(condmat,1))... 
-                zeros(nnodes+nirow-size(condmat,2),nnodes+nirow-size(condmat,1)) ];
+	   zeros(nnodes+nirow-size(condmat,1),size(condmat,1))... 
+				zeros(nnodes+nirow-size(condmat,2),nnodes+nirow-size(condmat,1)) ];
 %now having added lines to condmat, we need to make capmat the same size. source sometimes too
 capmat=[capmat 						zeros(size(capmat,1),size(condmat,2)-size(capmat,2));...
 		zeros(size(condmat,1)-size(capmat,1),size(capmat,2))	zeros(size(condmat,1)-size(capmat,1))	];
@@ -201,7 +249,7 @@ for t=1:timesteps
 		for nn=1:size(flist,2) %for optical fiber
 			j=flist(1,nn); %call the object relevant to the fiber, drop output in voltage source vector
 			fiber{j}=fiber{j}.simulateFiber(voltage(p1{j},t),t,(t-1),deltat);
-            source(nnodes+flist(2,nn),t)=fiber{j}.Vout;
+			source(nnodes+flist(2,nn),t)=fiber{j}.Vout;
 		end
 
 		voltage(:,t+1)= LU\(LL\LP*(capmat*voltage(:,t)+(source(:,t)+nlvsource)*deltat)); %MATH!
@@ -220,12 +268,13 @@ end
 
 figure; %plot the results
 for n=1:(nnodes+nirow)
-	subplot(nnodes+nirow,1,n)
 	if n<=nnodes
+		subplot(2,max(nnodes,nirow),n)
 		plot(1:timesteps+1,real(voltage(n,:)),1:timesteps+1,imag(voltage(n,:)));
 		title(['Node ' num2str(n)]);
 		ylabel('Voltage (V)');
 	else
+		subplot(2,max(nnodes,nirow),n)
 		plot(1:timesteps+1,-real(voltage(n,:)),1:timesteps+1,-imag(voltage(n,:)));
 		title(['Source ' Inames(n-nnodes)]);
 		ylabel('Current (A)');
