@@ -12,7 +12,7 @@
 %		input variables 					  name p1 p2  p3		p4			p5    p6
 % i reserved for sqrt(-1)
 
-clear variables;
+% clear all; clear classes;
 timesteps = 2000; %how long to simulate for
 deltat=0.00000002; % time in seconds for time step
 thresh=0.01; %accuracy of newton-rhapson loops for NLVCVs 
@@ -154,7 +154,7 @@ for j=1:length(name)
 			condmat(nnodes+nirow,p2{j})=1;
 			condmat(p2{j},nnodes+nirow)=1;
         end
-        fiber{j}.plotting=0;
+        fiber{j}.plotting=1;
         fdt = [fdt fiber{j}.deltat];
 	end
 end
@@ -200,7 +200,7 @@ for t=1:timesteps
 
 		for nn=1:size(flist,2) %for optical fiber
 			j=flist(1,nn); %call the object relevant to the fiber, drop output in voltage source vector
-			fiber{j}=fiber{j}.simulateFiber(voltage(p1{j},t),deltat);
+			fiber{j}=fiber{j}.simulateFiber(voltage(p1{j},t),t,(t-1),deltat);
             source(nnodes+flist(2,nn),t)=fiber{j}.Vout;
 		end
 
