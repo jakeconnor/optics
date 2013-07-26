@@ -23,7 +23,7 @@ classdef fdfiber %An object that simulates fibers
             obj.beta1 = beta1;
             obj.N = N;
             obj.alpha=alpha;
-            obj.step_num_z=max([obj.fiberLength*500*(obj.N) 200]);
+            obj.step_num_z=max([obj.fiberLength*100*(obj.N) 200]);
             obj.deltaz=obj.fiberLength/obj.step_num_z;
             obj.deltat=obj.beta1*obj.deltaz;
             obj.uu=((1+1i)*zeros(1,obj.step_num_z))';
@@ -51,6 +51,10 @@ classdef fdfiber %An object that simulates fibers
                     (-obj.Gmat*obj.uu(:,currenttstep)) + ...
                     (obj.deltat/obj.beta1)*1i*obj.N.*(abs(obj.uu(:,currenttstep)).^2).*obj.uu(:,currenttstep));
                 dXdT= (obj.uu(currenttstep)-obj.uu_old)/obj.deltat;
+                if any(isnan(obj.uu))
+                    disp('Fiber Simulation Failed')
+                   return 
+                end
             end
             
             if obj.plotting

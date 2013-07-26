@@ -18,7 +18,7 @@
 % todo: adjust timesteps and deltat based on something other than random
 % numbers
 timesteps = 2000; %how long to simulate for
-deltat=0.00000002; % time in seconds for time step
+deltat=0.0000002; % time in seconds for time step
 thresh=0.01; %accuracy of newton-rhapson loops for NLVCVs 
 
 %read in netlist here 
@@ -90,26 +90,33 @@ for j=1:length(name)
 			condmat(p2{j},nnodes+nirow)=1;
 		end
 	case 'X'
-		% nirow=nirow+1;
+		nirow=nirow+1;
 		xlist=[xlist [j]];
-		% Inames(nirow,:)=name{j}; 
+		Inames(nirow,:)=name{j}; 
 		p5{j}=str2num(p5{j}); 
 		p4{j}=str2num(p4{j});
 		p3{j}=str2num(p3{j});
-		condmat(p2{j},p2{j})=-1;
-		condmat(p4{j},p4{j})=-1;
+		%first current row
 		if p1{j}~=0 && p2{j}~=0
-			condmat(p2{j},p1{j})=sqrt(1-p5{j});
-		end
-		if p1{j}~=0 && p4{j}~=0
-			condmat(p4{j},p1{j})=sqrt(p5{j});
+			condmat(nnodes+nirow,p1{j})=sqrt(1-p5{j});
 		end
 		if p2{j}~=0 && p3{j} ~=0
-			condmat(p2{j},p3{j})=sqrt(p5{j});
+			condmat(nnodes+nirow,p3{j})=sqrt(p5{j});
 		end
+		condmat(nnodes+nirow,p2{j})=-1;
+		condmat(p2{j},nnodes+nirow)=1;
+		%for second current row
+		nirow=nirow+1;
+		condmat(p4{j},p4{j})=-1;
+		if p1{j}~=0 && p4{j}~=0
+			condmat(nnodes+nirow,p1{j})=sqrt(p5{j});
+		end
+
 		if p2{j}~=0 && p4{j} ~=0
-			condmat(p4{j},p2{j})=sqrt(1-p5{j});
+			condmat(nnodes+nirow,p2{j})=sqrt(1-p5{j});
 		end
+		condmat(nnodes+nirow,p4{j})=-1;
+		condmat(p4{j},nnodes+nirow)=1;
 	case 'S'
 		slist=[slist j];
 		nirow=nirow+1;
@@ -123,29 +130,11 @@ for j=1:length(name)
 		condmat(nnodes+nirow,p3{j})=-1/sqrt(2);
 		condmat(p3{j},nnodes+nirow)=1;
 
-
-
-		%here lies our failed attempts at making this work right.
-		% condmat(p1{j},p1{j})=condmat(p1{j},p1{j})+1;
-		% condmat(p2{j},p1{j})=condmat(p1{j},p2{j})-1/(sqrt(2));
-		% condmat(p3{j},p1{j})=condmat(p1{j},p3{j})-1/(sqrt(2));
-		% condmat(p2{j},p2{j})=condmat(p1{j},p2{j})+1;
-		% condmat(p3{j},p3{j})=condmat(p1{j},p3{j})+1;
-		% condmat(nnodes+nirow,p1{j})=1;
-		% condmat(nnodes+nirow,p2{j})=-1/sqrt(2);
-		% condmat(nnodes+nirow,p3{j})=-1/sqrt(2);
-		% condmat(p2{j},nnodes+nirow)=1;
-		% condmat(p3{j},nnodes+nirow)=1;
-		% condmat(p1{j},nnodes+nirow)=-1;
 	case 'J'
 		nirow=nirow+1;
 		Inames(nirow,:)=name{j}; 
 		jlist=[jlist [j;nirow]];
 		p3{j}=str2num(p3{j});
-		% condmat(p1{j},p3{j}) =condmat(p1{j},p3{j})+1;
-		% condmat(p2{j},p3{j}) =condmat(p2{j},p3{j})+1;
-		% condmat(p1{j},p1{j}) =condmat(p1{j},p1{j})-sqrt(2);
-		% condmat(p2{j},p2{j}) =condmat(p2{j},p2{j})-sqrt(2);
 		condmat(nnodes+nirow,p1{j})=-sqrt(2);
 		condmat(nnodes+nirow,p2{j})=-sqrt(2);
 		condmat(nnodes+nirow,p3{j})=2;
