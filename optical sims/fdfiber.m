@@ -7,6 +7,7 @@ classdef fdfiber %An object that simulates fibers
         plotting
         Vout
         deltat
+        movie
     end
     properties 
         step_num_z

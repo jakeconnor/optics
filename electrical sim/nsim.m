@@ -81,17 +81,23 @@ for j=1:length(name)
 		p3{j}=str2num(p3{j}); 
 	case 'P'
 		nirow=nirow+1;
-		plist=[plist j; nirow];
+        p5{j}=str2num(p5{j});
+        p3{j}=str2num(p3{j});
+		plist=[plist [j; nirow]];
 		Inames(nirow,:)=name{j};
 		if p2{j}~=0
 			condmat(nnodes+nirow,p2{j})=1;
 			condmat(p2{j},nnodes+nirow)=1;
 		end
 	case 'X'
-		nirow=nirow+1;
-		xlist=[xlist j;nirow];
-		Inames(nirow,:)=name{j}; 
+		% nirow=nirow+1;
+		xlist=[xlist [j]];
+		% Inames(nirow,:)=name{j}; 
 		p5{j}=str2num(p5{j}); 
+		p4{j}=str2num(p4{j});
+		p3{j}=str2num(p3{j});
+		condmat(p2{j},p2{j})=-1;
+		condmat(p4{j},p4{j})=-1;
 		if p1{j}~=0 && p2{j}~=0
 			condmat(p2{j},p1{j})=sqrt(1-p5{j});
 		end
@@ -99,7 +105,7 @@ for j=1:length(name)
 			condmat(p4{j},p1{j})=sqrt(p5{j});
 		end
 		if p2{j}~=0 && p3{j} ~=0
-			condmat(p3{j},p2{j})=sqrt(p5{j});
+			condmat(p2{j},p3{j})=sqrt(p5{j});
 		end
 		if p2{j}~=0 && p4{j} ~=0
 			condmat(p4{j},p2{j})=sqrt(1-p5{j});
@@ -109,8 +115,6 @@ for j=1:length(name)
 		nirow=nirow+1;
 		p3{j}=str2num(p3{j});
 		Inames(nirow,:)=name{j};
-		
-		%calla doesnt like this
 		condmat(nnodes+nirow,p1{j})=0.5;
 		condmat(nnodes+nirow,p2{j})=-1/sqrt(2);
 		condmat(p2{j},nnodes+nirow)=1;
@@ -144,7 +148,6 @@ for j=1:length(name)
 		% condmat(p2{j},p2{j}) =condmat(p2{j},p2{j})-sqrt(2);
 		condmat(nnodes+nirow,p1{j})=-sqrt(2);
 		condmat(nnodes+nirow,p2{j})=-sqrt(2);
-		%she doesnt like this either, but the results check out. 
 		condmat(nnodes+nirow,p3{j})=2;
 		condmat(p3{j},nnodes+nirow)=1;
 	case 'R'
@@ -202,7 +205,7 @@ for j=1:length(name)
 			condmat(nnodes+nirow,p2{j})=1;
 			condmat(p2{j},nnodes+nirow)=1;
 		end
-		fiber{j}.plotting=1;
+		fiber{j}.plotting=0;
 		fdt = [fdt fiber{j}.deltat];
 	end
 end
@@ -242,7 +245,7 @@ for t=1:timesteps
 		for nn=1:size(plist,2)
 			j=plist(1,nn);
 			if t>p5{j}
-				source(nnodes+plist(2,nn),t)=voltage(p1{j},t-p5{j})*exp(-1*i*eval(p4{j}))*exp(-0.5*p3{j});
+				source(nnodes+plist(2,nn),t)=voltage(p1{j},t-p5{j})*exp(-1i*eval(p4{j}))*exp(-0.5*p3{j});
 			end
 		end
 
@@ -263,7 +266,7 @@ for t=1:timesteps
 		end
 		d_nlvs= (nlvsource- nlvsource_old); %calculate change, to compare against accuracy threshhold
 		nlvsource_old=nlvsource; %set current to old for next round's comparison
-	end
+    end
 end
 
 figure; %plot the results
