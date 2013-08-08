@@ -5,7 +5,7 @@ classdef fdfiber %An object that simulates fibers
         N
         alpha
         plotting
-        Vout
+        Vouta
         deltat
         movie
     end
@@ -36,7 +36,7 @@ classdef fdfiber %An object that simulates fibers
             end
         end
         
-        function obj = simulateFiber(obj, Vin, currenttstep,lasttstep,circ_deltat)
+        function obj = simulateFiber(obj, Vin,~,currenttstep,lasttstep,circ_deltat)
             tstep = ceil((currenttstep*circ_deltat-lasttstep*circ_deltat)/obj.deltat); %decide on number of time steps
             %we round up, and can interpolate later
             
@@ -58,7 +58,7 @@ classdef fdfiber %An object that simulates fibers
             end
             
             if obj.plotting
-                plot(1:size(obj.uu,1),real(obj.uu(:,currenttstep)),'r-')%, axis([0 step_num_z 0 1]);
+                plot(1:size(obj.uu,1),real(obj.uu(:,currenttstep)),'r-')
                 hold on;
                 plot(1:size(obj.uu,1),imag(obj.uu(:,currenttstep)),'g-')
                 hold off;
@@ -67,7 +67,7 @@ classdef fdfiber %An object that simulates fibers
             end
             
             weight=mod(circ_deltat*(currenttstep-lasttstep)/obj.deltat,1); %interpolate if we had to make an extra step
-            obj.Vout=(weight*obj.uu(end)+(1-weight)*obj.uu_old(end));
+            obj.Vouta=(weight*obj.uu(end)+(1-weight)*obj.uu_old(end));
         end
         
     end
