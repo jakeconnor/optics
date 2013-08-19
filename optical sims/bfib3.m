@@ -72,7 +72,7 @@ classdef bfib3
         
         
         %% simulateFiber: propogates the fiber for some time
-        function obj = simulateFiber(obj, Vina, Vinb, circstep, lastcircstep, circdeltat)
+        function obj = simulateFiber(obj, Vina, Vinb, circstep, ~, circdeltat)
             Vin{1}=Vina; Vin{2}=Vinb;
             
             %this time around the waves keep track of real time, so if the
