@@ -15,11 +15,9 @@
 %  Bidirectional Fiber or Waveguide				B# In In  Out       Out	Length  Beta1A   NA    LossA	  Beta1B
 %														  	p10			p11	  p12
 %												   		  	NB 			LossB Sigma
-% i reserved for sqrt(-1)
 
 clear variables;
-% todo: adjust timesteps and deltat based on something other than random
-% numbers
+% todo: adjust timesteps and deltat based on something other than random numbers
 timesteps = 2000; %how long to simulate for
 deltat=0.000002; % time in seconds for time step
 thresh=0.01; %accuracy of newton-rhapson loops for NLVCVs
@@ -48,7 +46,7 @@ for j=1:length(name)
         case 'V'
             nirow=nirow+1; %add a current row for each component that needs one.
             vlist=[vlist [j;nirow]];
-            %appends location of coponents in netlist, and their assoscated current row for later use
+            %appends location of components in netlist, and their assoscated current row for later use
             Inames(nirow,:)=name{j}; %name for graphing later
             p3{j}=str2num(p3{j}); %needs to be a number (or matrix of)
             if p1{j}~=0; condmat(nnodes+nirow,p1{j}) = -1; end
@@ -247,7 +245,7 @@ capmat=[capmat 						zeros(size(capmat,1),size(condmat,2)-size(capmat,2));...
 %that done, define our matrices for actual math using LU decomp.
 [LL,LU,LP]=lu(sparse(capmat)+deltat*sparse(condmat)); %leaves cap&cond in full form for analysis
 %but completes the LU facotrization for speed
-%more pre-allocations
+%pre-allocations
 matsize=size(condmat,1);
 source=[source; zeros(nnodes+nirow-size(source,1),size(source,2))];
 
@@ -266,7 +264,7 @@ for t=1:timesteps
                 if p4{j}~=0; vdrop=-voltage(p4{j},t-p6{j}); end
                 if p5{j}~=0; vdrop= vdrop + voltage(p5{j},t-p6{j}); end
                 source(nnodes+dlist(2,nn),t)= p5{j}*vdrop;
-                %TODO (maybe) support nonlinear here also, depreciate either E or D component
+                %TODO: support nonlinear here also, depreciate either E or D component
             end
         end
         for nn=1:size(plist,2)
@@ -284,21 +282,23 @@ for t=1:timesteps
             source(nnodes+flist(2,nn)+1,t)=fiber{j}.Voutb;
             catch
             end
-                %this relies on the output for node 2 being created directly after output for
-                %node 1. It will work, but its kludgy.
             
         end
         
         voltage(:,t+1)= LU\(LL\LP*(capmat*voltage(:,t)+(source(:,t)+nlvsource)*deltat)); %MATH!
-        %now reconsider nonlinear voltage courses
+        % recalculate nonlinear voltage courses
         %(at t>1 the above calc uses previous steps vopltages as first guess)
         for nn=1:size(elist,2)
             vdrop=0; %same as in D-component
             if p3{j}~=0; vdrop = vdrop - voltage(p3{j},t+1); end
             if p4{j}~=0; vdrop = vdrop + voltage(p4{j},t+1); end
-            nlvsource(nnodes+dlist(2,nn))=eval(p5{j}); %this one's a bit different, runs user-supplied command
+            try
+            nlvsource(nnodes+dlist(2,nn))=eval(p5{j}); %runs user-supplied command
+            catch
+                error('Nonlinear voltage source relation is invalid')
+            end
         end
-        d_nlvs= (nlvsource- nlvsource_old); %calculate change, to compare against accuracy threshhold
+        d_nlvs= (nlvsource - nlvsource_old); %calculate change, to compare against accuracy threshhold
         nlvsource_old=nlvsource; %set current to old for next round's comparison
     end
 end
