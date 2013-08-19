@@ -40,7 +40,7 @@ classdef bfib3
                 obj.step_num_z{nfib}=max([obj.fiberLength*100*obj.N{nfib} 200]);
                 obj.deltaz{nfib}=obj.fiberLength/obj.step_num_z{nfib};
                 obj.deltat{nfib}=obj.beta1{nfib}*obj.deltaz{nfib};
-                obj.uu{nfib}=((1+1i)*zeros(obj.step_num_z{nfib},1/obj.deltat{nfib}));
+                obj.uu{nfib}=((1+1i)*zeros(obj.step_num_z{nfib},obj.fiberLength/obj.deltat{nfib}));%%
                 obj.Gmat{nfib}=zeros(obj.step_num_z{nfib});
                 for n=1:obj.step_num_z{nfib}
                     obj.Gmat{nfib}(n,n)=sign(obj.beta1{nfib})/obj.deltaz{nfib} + obj.loss{nfib}/2; %%for upwinding
@@ -94,16 +94,16 @@ classdef bfib3
                 dXdT{nfib}= (obj.uu{nfib}(obj.currentstep{nfib})-obj.uu_old{nfib})/obj.deltat{nfib};
                 
                 obj.laststep{nfib}=obj.currentstep{nfib};
-                obj.currentstep{nfib}=obj.currentstep{nfib}+1;
                 obj.time{nfib}=obj.time{nfib}+obj.deltat{nfib};
+                obj.currentstep{nfib}=obj.currentstep{nfib}+1;
             end
             
             for nfib=1:2
                 weight{nfib}=mod(circdeltat*(obj.currentstep{nfib}-obj.laststep{nfib})/obj.deltat{nfib},1);
             end
             
-            obj.Vouta=(weight{1}*obj.uu{1}(end,obj.currentstep{1})+(1-weight{1})*obj.uu_old{1}(end));
-            obj.Voutb=(weight{2}*obj.uu{2}(end,obj.currentstep{2})+(1-weight{2})*obj.uu_old{2}(end));
+            obj.Vouta=(weight{1}*obj.uu{1}(end,obj.currentstep{1}-1)+(1-weight{1})*obj.uu_old{1}(end));
+            obj.Voutb=(weight{2}*obj.uu{2}(end,obj.currentstep{2}-1)+(1-weight{2})*obj.uu_old{2}(end));
             
             
         end
