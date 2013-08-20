@@ -18,7 +18,7 @@
 
 clear variables;
 % todo: adjust timesteps and deltat based on something other than random numbers
-timesteps = 500; %how long to simulate for
+timesteps = 1000; %how long to simulate for
 deltat=0.000002; % time in seconds for time step
 thresh=0.01; %accuracy of newton-rhapson loops for NLVCVs
 
