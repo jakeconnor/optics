@@ -31,12 +31,13 @@ classdef fdfiber %An object that simulates fibers
             obj.deltat=obj.beta1*obj.deltaz;
 
             %preallocate matrices
-            obj.uu=((1+1i)*zeros(1,obj.step_num_z))';
-            obj.Gmat=zeros(obj.step_num_z);
+            obj.uu{1}=0; %define it as a cell array
+             [obj.uu{1:(obj.fiberLength/obj.deltat)}]=deal(((1+1i)*zeros(obj.step_num_z,1)));  
+             obj.Gmat=zeros(obj.step_num_z);
             %and form the G matrix
             for n=1:obj.step_num_z
                 obj.Gmat(n,n)=sign(obj.beta1)/obj.deltaz + obj.alpha/2; %%for upwinding
-                if n-sign(obj.beta1)>0 & n-sign(obj.beta1) <= obj.step_num_z;
+                if n-sign(obj.beta1)>0 && n-sign(obj.beta1) <= obj.step_num_z;
                     obj.Gmat(n,n-sign(obj.beta1))=-sign(obj.beta1)/obj.deltaz;
                 end
             end
@@ -49,18 +50,14 @@ classdef fdfiber %An object that simulates fibers
             %actually simulate for the time steps
             for n=1:tstep
                 lasttstep=lasttstep+~lasttstep; % if laststep is 0 sets it to 1
-                obj.uu_old=obj.uu(:,lasttstep); 
-                obj.uu(:,currenttstep)=obj.uu(:,lasttstep);
-                obj.uu(1,currenttstep)=Vin; %bring in the most current part ofthe input wave
+                obj.uu_old=obj.uu{lasttstep}(:); 
+                obj.uu{currenttstep}(:)=obj.uu{lasttstep}(:);
+                obj.uu{currenttstep}(1)=Vin; %bring in the most current part ofthe input wave
                 %propogates the fiber
-                obj.uu(:,currenttstep)= obj.uu(:,currenttstep)+((obj.deltat/obj.beta1)* ...
-                    (-obj.Gmat*obj.uu(:,currenttstep)) + ...
-                    (obj.deltat/obj.beta1)*1i*obj.N.*(abs(obj.uu(:,currenttstep)).^2).*obj.uu(:,currenttstep));
-                dXdT= (obj.uu(currenttstep)-obj.uu_old)/obj.deltat; %calculate the derivative
-                if any(isnan(obj.uu)) %check for breakdown
-                    disp('Fiber Simulation Failed')
-                   return 
-                end
+                obj.uu{currenttstep}(:)= obj.uu{currenttstep}(:)+((obj.deltat/obj.beta1)* ...
+                    (-obj.Gmat*obj.uu{currenttstep}(:)) + ...
+                    (obj.deltat/obj.beta1)*1i*obj.N.*(abs(obj.uu{currenttstep}(:)).^2).*obj.uu{currenttstep}(:));
+                dXdT= (obj.uu{currenttstep}-obj.uu_old)/obj.deltat; %calculate the derivative
             end
             
             if obj.plotting
@@ -74,7 +71,7 @@ classdef fdfiber %An object that simulates fibers
             end
             
             weight=mod(circ_deltat*(currenttstep-lasttstep)/obj.deltat,1); %interpolate if we had to make an extra step
-            obj.Vouta=(weight*obj.uu(end)+(1-weight)*obj.uu_old(end)); %and output a value to the circuit simulator
+            obj.Vouta=(weight* obj.uu{currenttstep}(end)+(1-weight)*obj.uu_old(end)); %and output a value to the circuit simulator
         end
         
     end
