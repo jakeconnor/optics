@@ -18,7 +18,7 @@
 
 clear variables;
 % todo: adjust timesteps and deltat based on something other than random numbers
-timesteps = 2000; %how long to simulate for
+timesteps = 500; %how long to simulate for
 deltat=0.000002; % time in seconds for time step
 thresh=0.01; %accuracy of newton-rhapson loops for NLVCVs
 
@@ -216,7 +216,7 @@ for j=1:length(name)
             flist=[flist [j; nirow]];
             Inames(nirow,:)=name{j};
             
-            fiber{j} = bfib3(p5{j},p6{j},p7{j},p8{j},p9{j},p10{j},p11{j},p12{j});
+            fiber{j} = bfib4(p5{j},p6{j},p7{j},p8{j},p9{j},p10{j},p11{j},p12{j});
             if p4{j}~=0
                 condmat(nnodes+nirow,p4{j})=1;
                 condmat(p4{j},nnodes+nirow)=1;
