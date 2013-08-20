@@ -1,6 +1,6 @@
 classdef bfib3
     %bfib3
-    %   lets try this again, shall we?
+    
     
     properties
         fiberLength
@@ -88,8 +88,10 @@ classdef bfib3
                 
                 obj.uu{nfib}(:,obj.currentstep{nfib})= obj.uu{nfib}(:,obj.currentstep{nfib})+((obj.deltat{nfib}/obj.beta1{nfib})* ...
                     (-obj.Gmat{nfib}*obj.uu{nfib}(:,obj.currentstep{nfib})) + ...
-                    (obj.deltat{nfib}/obj.beta1{nfib})*1i*obj.N{nfib}.*(abs(obj.uu{nfib}(:,obj.currentstep{nfib})).^2).* ...
-                    obj.uu{nfib}(:,obj.currentstep{nfib}));
+                    (obj.deltat{nfib}/obj.beta1{nfib})*1i ...
+                    *(obj.N{nfib}.*(abs(obj.uu{nfib}(:,obj.currentstep{nfib})).^2)...
+                    + obj.sigma.*(abs(obj.uu{oppfib}(:,obj.currentstep{oppfib})).^2).* ...
+                    obj.uu{nfib}(:,obj.currentstep{nfib})));
 
                 dXdT{nfib}= (obj.uu{nfib}(obj.currentstep{nfib})-obj.uu_old{nfib})/obj.deltat{nfib};
                 
