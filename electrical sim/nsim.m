@@ -180,8 +180,7 @@ for j=1:length(name)
                 condmat(p2{j},nnodes+nirow) = -1;
                 condmat(nnodes+nirow,p2{j}) = 1;
             end
-            if p1{j}~=0 && p2{j}~=0; %%I have no idea what I did here. I'm sure something belongs here
-            end
+            
             capmat(nnodes+nirow,nnodes+nirow)=p3{j};
         case 'F'
             nirow=nirow+1;
